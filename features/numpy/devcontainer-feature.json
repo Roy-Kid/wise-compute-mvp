@@ -1,0 +1,23 @@
+{
+  "id": "numpy",
+  "version": "1.0.0",
+  "name": "NumPy",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "2.1.3",
+      "description": "NumPy version"
+    }
+  },
+  "dependsOn": {
+    "./features/python": {}
+  },
+  "customizations": {
+    "wisehub": {
+      "requires": [
+        "python-abi"
+      ],
+      "smoke": "python -c 'import numpy; print(numpy.__version__)'"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "mpi4py",
+  "version": "1.0.0",
+  "name": "mpi4py (built against the image's MPI)",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "4.0.3",
+      "description": "mpi4py version"
+    }
+  },
+  "dependsOn": {
+    "./features/python": {}
+  },
+  "installsAfter": [
+    "./features/openmpi",
+    "./features/mpich"
+  ],
+  "customizations": {
+    "wisehub": {
+      "requires": [
+        "python-abi",
+        "mpi"
+      ],
+      "smoke": "python -c 'from mpi4py import MPI; print(MPI.Get_library_version().splitlines()[0])'"
+    }
+  }
+}

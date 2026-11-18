@@ -1,0 +1,14 @@
+{
+  "id": "openmpi",
+  "version": "1.0.0",
+  "name": "openmpi (system package)",
+  "options": {},
+  "customizations": {
+    "wisehub": {
+      "provides": {
+        "mpi": "openmpi"
+      },
+      "smoke": "mpirun --version | head -1"
+    }
+  }
+}
