@@ -1,0 +1,6 @@
+{
+  "id": "rust",
+  "version": "1.0.0",
+  "name": "Rust",
+  "description": "Installs Rust and Cargo from Ubuntu."
+}

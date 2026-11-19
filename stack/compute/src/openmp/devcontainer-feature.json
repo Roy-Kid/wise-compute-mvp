@@ -1,0 +1,6 @@
+{
+  "id": "openmp",
+  "version": "1.0.0",
+  "name": "GNU OpenMP runtime",
+  "description": "Installs the GNU OpenMP runtime for GNU-built applications."
+}

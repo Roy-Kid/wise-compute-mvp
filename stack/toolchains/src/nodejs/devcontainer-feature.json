@@ -1,0 +1,6 @@
+{
+  "id": "nodejs",
+  "version": "1.0.0",
+  "name": "Node.js",
+  "description": "Installs a checksum-verified distribution of Node.js."
+}

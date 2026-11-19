@@ -1,0 +1,22 @@
+{
+  "name": "WiseHub cpu",
+  "image": "docker.io/library/ubuntu:24.04@sha256:77eb101c607d6e3d4f5ad0c8a02c2136c689b98aba1f359e6502ba517e5c57ec",
+  "features": {
+    "./compute/openmp": {},
+    "./compute/openmpi": {},
+    "./compute/linear-algebra": {},
+    "./compute/scalapack": {},
+    "./toolchains/python": {},
+    "./toolchains/conda": {},
+    "./toolchains/uv": {},
+    "./toolchains/rust": {},
+    "./toolchains/nodejs": {},
+    "./applications/numpy": {},
+    "./applications/mpi4py": {},
+    "./applications/lammps": {},
+    "./applications/cp2k": {},
+    "./applications/quantum-espresso": {},
+    "./applications/wannier90": {},
+    "./applications/packmol": {}
+  }
+}

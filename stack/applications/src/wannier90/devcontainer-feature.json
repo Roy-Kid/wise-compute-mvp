@@ -1,0 +1,6 @@
+{
+  "id": "wannier90",
+  "version": "1.0.0",
+  "name": "Wannier90",
+  "description": "Installs the distribution build of Wannier90."
+}

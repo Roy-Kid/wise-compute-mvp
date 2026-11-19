@@ -1,0 +1,6 @@
+{
+  "id": "conda",
+  "version": "1.0.0",
+  "name": "Conda",
+  "description": "Installs a checksum-verified distribution of Conda."
+}
