@@ -1,0 +1,6 @@
+{
+  "id": "openmpi",
+  "version": "1.0.0",
+  "name": "Open MPI",
+  "description": "Installs the Ubuntu build of Open MPI with compiler wrappers. Mutually exclusive with mpich."
+}

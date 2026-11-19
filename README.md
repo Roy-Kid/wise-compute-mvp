@@ -1,40 +1,47 @@
 # WiseHub
 
-WiseHub 使用官方 Dev Container CLI 构建科学计算镜像，并通过 OCI Registry 推送和拉取。设计契约见 [全量重构规范](docs/refactor-spec.md)。
+WiseHub 用官方 Dev Container 工具链构建 CPU 和 CUDA 两个 all-in-one 科学计算镜像，并按 digest 推送和拉取。
 
-| 层级 | 源码 |
+| 目录 | 内容 |
 | --- | --- |
-| 系统基座 | [stack/base](stack/base)，Ubuntu 24.04 CPU 与同版 Ubuntu 的 NVIDIA CUDA |
-| 计算库 | [stack/compute](stack/compute)，OpenMP、Open MPI、MPICH、线性代数、ScaLAPACK |
-| 工具链 | [stack/toolchains](stack/toolchains)，Python、Conda、uv、Rust、Node.js |
-| 科学应用 | [stack/applications](stack/applications)，NumPy、mpi4py、LAMMPS、CP2K、QE、Wannier90、Packmol |
-| 最终交付 | [stack/delivery](stack/delivery)，CPU 和 CUDA 各一份标准 Dev Container 工作区 |
+| [`cli/`](cli) | `wisehub` 命令行：`image build`、`image push`、`image pull` |
+| [`stack/`](stack) | 镜像配方：Feature 集合、[`stack.json`](stack/stack.json)、CPU/CUDA Dockerfile、验收脚本 |
+| [`docs/`](docs) | [架构](docs/architecture.md)、[命令协议](docs/protocol-v1.md)、[roadmap](docs/roadmap.md) |
 
-## 安装和构建
+镜像内容：OpenMP、Open MPI、OpenBLAS/LAPACK/FFTW、ScaLAPACK；Python、Conda、uv、Rust、Node.js；NumPy、mpi4py、LAMMPS、CP2K、Quantum ESPRESSO、Wannier90、Packmol。CUDA 版另含 GPU 构建的 `lmp-cuda`。
 
-需要 Node.js 22+。镜像构建与传输使用 Docker 和 Buildx。
+## 开发
+
+需要 Node.js 22.18+。构建和 Feature 测试需要 Docker 与 Buildx。
 
 ```bash
-npm ci
-npm run build
-npm link
-
-for variant in cpu cuda; do
-  wisehub image features resolve-dependencies --workspace-folder "stack/delivery/$variant"
-  wisehub image build-local --workspace-folder "stack/delivery/$variant" \
-    --platform linux/amd64 --image "wise-compute:$variant"
-done
+npm ci                              # 安装依赖并编译 cli
+npm test                            # 两个 workspace 的静态测试，无需 Docker
+npm run test:features -w stack      # 在容器中逐个安装并测试 Feature
 ```
 
-Feature 源码使用标准 `src/<id>` 和 `test/<id>`。开发工作区通过标准本地 Feature 引用选择各层。使用 `wisehub image features package stack/toolchains/src --output-folder build/toolchains` 可打包工具链集合。联合验收使用 [交付测试](stack/delivery/test/verify.sh)，CPU 与 CUDA 分别在目标节点执行。CUDA 配方包含独立的 GPU LAMMPS 入口 `lmp-cuda`。
-
-## 运行验收
+## 构建与验收
 
 ```bash
-docker run --rm --mount "type=bind,src=$PWD/stack/delivery/test,dst=/checks,readonly" \
+npm run render -w stack             # 生成 stack/build/recipes/{cpu,cuda}
+for variant in cpu cuda; do
+  npx wisehub image build --workspace-folder "stack/build/recipes/$variant" \
+    --platform linux/amd64 --image "wise-compute:$variant"
+done
+
+docker run --rm --mount "type=bind,src=$PWD/stack/recipes,dst=/checks,readonly" \
   --entrypoint /bin/sh wise-compute:cpu /checks/verify.sh cpu
-docker run --rm --gpus all --mount "type=bind,src=$PWD/stack/delivery/test,dst=/checks,readonly" \
+docker run --rm --gpus all --mount "type=bind,src=$PWD/stack/recipes,dst=/checks,readonly" \
   --entrypoint /bin/sh wise-compute:cuda /checks/verify.sh cuda
 ```
 
-推送和拉取使用 [OCI 传输协议](docs/protocol-v1.md)。当前配方用于本地集成，生产 OCI Feature 锁、系统包锁以及 GPU CP2K 资格须在发布前补齐。
+渲染出的工作区是标准 Dev Container 配置，也可以直接交给 `devcontainer build`。
+
+## 常见修改
+
+| 目的 | 修改 |
+| --- | --- |
+| 增加软件 | 新建 `stack/features/src/<id>` 与 `test/<id>`，在 `stack.json` 的相应层加入 id |
+| 升级系统包 | 修改 `stack.json` 的 `aptSnapshot` |
+| 升级基座镜像 | 修改 `stack.json` 中对应 `*_IMAGE` 的 digest |
+| 升级 pip/直链软件 | 修改对应 Feature 的版本选项或 `install.sh` 中的版本与校验值，并提升 Feature `version` |

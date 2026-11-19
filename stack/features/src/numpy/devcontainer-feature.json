@@ -1,0 +1,13 @@
+{
+  "id": "numpy",
+  "version": "1.0.0",
+  "name": "NumPy",
+  "description": "Installs NumPy into the environment provided by the python Feature, which must be installed first.",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "2.1.3",
+      "description": "NumPy version"
+    }
+  }
+}

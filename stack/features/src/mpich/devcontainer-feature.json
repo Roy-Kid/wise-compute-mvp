@@ -1,0 +1,6 @@
+{
+  "id": "mpich",
+  "version": "1.0.0",
+  "name": "MPICH",
+  "description": "Installs the Ubuntu build of MPICH with compiler wrappers. Mutually exclusive with openmpi."
+}

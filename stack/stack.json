@@ -1,0 +1,21 @@
+{
+  "aptSnapshot": "20261101T000000Z",
+  "tiers": {
+    "compute": ["openmp", "openmpi", "linear-algebra", "scalapack"],
+    "toolchains": ["python", "conda", "uv", "rust", "nodejs"],
+    "applications": ["numpy", "mpi4py", "lammps", "cp2k", "quantum-espresso", "wannier90", "packmol"]
+  },
+  "variants": {
+    "cpu": {
+      "buildArgs": {
+        "BASE_IMAGE": "docker.io/library/ubuntu:24.04@sha256:77eb101c607d6e3d4f5ad0c8a02c2136c689b98aba1f359e6502ba517e5c57ec"
+      }
+    },
+    "cuda": {
+      "buildArgs": {
+        "BASE_IMAGE": "docker.io/nvidia/cuda:12.9.1-runtime-ubuntu24.04@sha256:1199283a7fd5fc7dcb472ea4c6b6d8eb378ef8c0b9aae5e731491c01a219ca43",
+        "CUDA_DEVEL_IMAGE": "docker.io/nvidia/cuda:12.9.1-devel-ubuntu24.04@sha256:e542739fcaa4f45da5add8c4cf5769783a61628b2518304a5bbe4ace468b8c8f"
+      }
+    }
+  }
+}

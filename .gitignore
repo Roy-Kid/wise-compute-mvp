@@ -1,7 +1,3 @@
-build/
-.bin/
-.venv/
-dist/
-__pycache__/
-
 node_modules/
+dist/
+build/

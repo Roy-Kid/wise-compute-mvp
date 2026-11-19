@@ -1,4 +1,0 @@
-{
-  "name": "WiseHub cuda base",
-  "image": "docker.io/nvidia/cuda:12.9.1-runtime-ubuntu24.04@sha256:1199283a7fd5fc7dcb472ea4c6b6d8eb378ef8c0b9aae5e731491c01a219ca43"
-}
