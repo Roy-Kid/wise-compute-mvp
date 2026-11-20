@@ -1,19 +1,70 @@
 {
   "id": "lammps",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "name": "LAMMPS",
-  "description": "Builds LAMMPS stable_30Sep2026_update1 (lmp) into /opt/wise with the image's MPI, FFTW, OpenBLAS and the OPENMP package. With kokkosCudaArch it also builds KOKKOS for that GPU with cuFFT from the CUDA base image.",
+  "description": "Builds LAMMPS stable_30Sep2026_update1 (lmp) into /opt/wise for the x86-64-v3 baseline with the image's MPI and OpenBLAS; KSPACE always uses the FFTW of the fftw Feature. Every bundled package is built except INTEL (needs the Intel compiler to pay off) and none that needs a third-party library or downloads code; packages backed by a Feature (PLUMED, H5MD, NETCDF) are added on request. The cuda variant adds KOKKOS (CUDA backend, cuFFT) and never the native GPU package.",
   "options": {
-    "kokkosCudaArch": {
+    "variant": {
       "type": "string",
-      "proposals": ["", "VOLTA70", "AMPERE80", "ADA89", "HOPPER90"],
+      "enum": [
+        "cpu",
+        "cuda"
+      ],
+      "default": "cpu",
+      "description": "cpu: MPI + OPENMP package. cuda: additionally KOKKOS with the CUDA backend; requires the CUDA base image."
+    },
+    "gpuArch": {
+      "type": "string",
+      "enum": [
+        "VOLTA70",
+        "AMPERE80",
+        "AMPERE86",
+        "ADA89",
+        "HOPPER90"
+      ],
+      "default": "AMPERE80",
+      "description": "Kokkos GPU architecture of the cuda variant (Kokkos_ARCH_<value>), one per build; PTX is embedded too, so newer GPUs run after a JIT compile at first launch."
+    },
+    "potentials": {
+      "type": "string",
+      "enum": [
+        "none",
+        "bundled",
+        "all"
+      ],
+      "default": "bundled",
+      "description": "none: install no potential files. bundled: the potentials shipped in the LAMMPS source. all: also the large potential files of the enabled packages, downloaded from download.lammps.org and SHA256-checked by LAMMPS."
+    },
+    "extraPackages": {
+      "type": "string",
       "default": "",
-      "description": "Kokkos GPU architecture (Kokkos_ARCH_<value>); requires the CUDA base image. Empty builds the CPU-only binary."
+      "description": "Packages to add, comma or space separated. A package backed by a Feature (PLUMED: plumed, H5MD: hdf5, NETCDF: netcdf) needs that Feature; INTEL is off by default and can be added for the cpu variant."
+    },
+    "disablePackages": {
+      "type": "string",
+      "default": "",
+      "description": "Bundled packages to leave out, comma or space separated. KSPACE cannot be left out."
+    },
+    "cmakeArgs": {
+      "type": "string",
+      "default": "",
+      "description": "Extra CMake arguments, space separated, applied last. All checks still apply."
     }
   },
-  "dependsOn": {
-    "harbor.will/willmat/wise/infra/openmp:1": {},
-    "harbor.will/willmat/wise/infra/linear-algebra:1": {}
+  "containerEnv": {
+    "LAMMPS_POTENTIALS": "/opt/wise/share/lammps/potentials"
   },
-  "installsAfter": ["harbor.will/willmat/wise/infra/openmpi:1", "harbor.will/willmat/wise/infra/mpich:1"]
+  "dependsOn": {
+    "harbor.will/willmat/wise/infra/core:1": {},
+    "harbor.will/willmat/wise/infra/openmp:2": {},
+    "harbor.will/willmat/wise/infra/linear-algebra:2": {},
+    "harbor.will/willmat/wise/infra/fftw:1": {}
+  },
+  "installsAfter": [
+    "harbor.will/willmat/wise/infra/openmpi:2",
+    "harbor.will/willmat/wise/infra/mpich:2",
+    "harbor.will/willmat/wise/infra/hdf5:1",
+    "harbor.will/willmat/wise/infra/netcdf:1",
+    "harbor.will/willmat/wise/applications/plumed:1"
+  ]
 }

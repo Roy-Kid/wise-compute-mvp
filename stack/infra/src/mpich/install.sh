@@ -1,17 +1,22 @@
 #!/bin/sh
 set -eu
+. /opt/wise/lib/wise/feature.sh mpich
 
-if [ -e /opt/wise/bin/mpicc ]; then echo "mpich: another MPI is already installed in /opt/wise" >&2; exit 1; fi
-work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
-cd "$work"
-curl --fail --location --silent --show-error --retry 3 --proto '=https' \
-    https://www.mpich.org/static/downloads/4.3.2/mpich-4.3.2.tar.gz -o src.tar.gz
-echo "47d774587a7156a53752218c811c852e70ac44db9c502dc3f399b4cb817e3818  src.tar.gz" | sha256sum --check
-tar -xzf src.tar.gz --strip-components=1
-
-set -- --prefix=/opt/wise --disable-static CC=gcc CXX=g++ FC=gfortran
-if [ -n "${CUDA_HOME:-}" ]; then set -- "$@" --with-cuda="$CUDA_HOME"; fi
+wise_require libfabric
+# One MPI per image: openmpi and mpich both claim the mpi capability.
+wise_provide mpi
+wise_workdir
+cd "$WISE_WORK"
+wise_fetch_tar https://www.mpich.org/static/downloads/4.3.2/mpich-4.3.2.tar.gz \
+    47d774587a7156a53752218c811c852e70ac44db9c502dc3f399b4cb817e3818 src
+cd src
+set -- --prefix="$WISE_PREFIX" --disable-static CC=gcc CXX=g++ FC=gfortran \
+    --with-device=ch4:ofi --with-libfabric="$WISE_PREFIX" --with-hwloc=embedded
+if wise_cuda; then set -- "$@" --with-cuda="$CUDA_HOME"; fi
 ./configure "$@"
-make -j"$(nproc)" install
+make -j"$(nproc)"
+make install-strip
 ldconfig
+"$WISE_PREFIX/bin/mpichversion" | grep -q 'ch4:ofi' || wise_fail "MPICH was not built with the ch4:ofi device"
+wise_linked "$WISE_PREFIX/lib/libmpi.so" "$WISE_PREFIX/lib/libfabric"
+wise_done

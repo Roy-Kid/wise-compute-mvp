@@ -1,6 +1,9 @@
 {
   "id": "nodejs",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Node.js",
-  "description": "Installs a checksum-verified distribution of Node.js."
+  "description": "Installs a checksum-verified distribution of Node.js.",
+  "dependsOn": {
+    "harbor.will/willmat/wise/infra/core:1": {}
+  }
 }

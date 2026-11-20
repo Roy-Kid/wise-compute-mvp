@@ -1,10 +1,13 @@
 {
   "id": "python",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "name": "Python virtual environment",
   "description": "Installs Ubuntu CPython with build tools and a shared virtual environment. Later Features and users locate it through WISE_VENV.",
   "containerEnv": {
     "WISE_VENV": "/opt/wise/venv",
     "PATH": "/opt/wise/venv/bin:${PATH}"
+  },
+  "dependsOn": {
+    "harbor.will/willmat/wise/infra/core:1": {}
   }
 }

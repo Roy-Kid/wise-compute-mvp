@@ -1,20 +1,48 @@
 {
   "id": "quantum-espresso",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "name": "Quantum ESPRESSO",
-  "description": "Builds Quantum ESPRESSO 7.6 into /opt/wise with the image's MPI, FFTW, ScaLAPACK and OpenBLAS. With cudaCC it builds the GPU version with nvfortran, OpenACC, cuFFT and cuSOLVER from the CUDA base image's HPC SDK.",
+  "description": "Builds Quantum ESPRESSO 7.6 into /opt/wise: every bundled program, no third-party library unless asked. CPU: GCC, MPI + OpenMP, FFTW, ScaLAPACK, OpenBLAS. With cudaCC: nvfortran with OpenACC, cuFFT, cuSOLVER and GPU-aware MPI, one MPI rank per GPU and no OpenMP, linked only to SDK BLAS/LAPACK and the nvfortran libraries in /opt/wise/nvhpc so GCC's OpenMP runtime never loads.",
   "options": {
     "cudaCC": {
       "type": "string",
-      "proposals": ["", "70", "80", "89", "90"],
+      "proposals": [
+        "",
+        "70",
+        "80",
+        "90",
+        "80,90"
+      ],
       "default": "",
-      "description": "GPU compute capability for nvfortran (-gpu=ccXX); requires the CUDA base image. Empty builds the CPU version with GCC."
+      "description": "GPU compute capabilities for nvfortran, comma separated (80,90 builds for A100 and H100); requires the CUDA base image. Empty builds the CPU version with GCC."
+    },
+    "elpa": {
+      "type": "boolean",
+      "default": false,
+      "description": "Use ELPA as the distributed eigensolver; needs the elpa Feature."
+    },
+    "hdf5": {
+      "type": "boolean",
+      "default": false,
+      "description": "Write wavefunctions and charge densities with parallel HDF5; needs the hdf5 Feature."
+    },
+    "cmakeArgs": {
+      "type": "string",
+      "default": "",
+      "description": "Extra CMake arguments, space separated, applied last."
     }
   },
   "dependsOn": {
-    "harbor.will/willmat/wise/infra/openmp:1": {},
-    "harbor.will/willmat/wise/infra/linear-algebra:1": {},
+    "harbor.will/willmat/wise/infra/core:1": {},
+    "harbor.will/willmat/wise/infra/openmp:2": {},
+    "harbor.will/willmat/wise/infra/linear-algebra:2": {},
+    "harbor.will/willmat/wise/infra/fftw:1": {},
     "harbor.will/willmat/wise/infra/scalapack:1": {}
   },
-  "installsAfter": ["harbor.will/willmat/wise/infra/openmpi:1", "harbor.will/willmat/wise/infra/mpich:1"]
+  "installsAfter": [
+    "harbor.will/willmat/wise/infra/openmpi:2",
+    "harbor.will/willmat/wise/infra/mpich:2",
+    "harbor.will/willmat/wise/infra/elpa:1",
+    "harbor.will/willmat/wise/infra/hdf5:1"
+  ]
 }

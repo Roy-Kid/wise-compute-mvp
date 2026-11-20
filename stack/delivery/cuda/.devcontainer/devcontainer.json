@@ -5,20 +5,29 @@
     "dockerfile": "../../../base/cuda/.devcontainer/Dockerfile",
     "context": "../../../base/cuda/.devcontainer"
   },
+  // MPI inside one container: shared-memory transport needs a large /dev/shm, single-copy (CMA) needs
+  // ptrace between sibling ranks, RDMA needs unlimited locked memory. Add --device=/dev/infiniband and
+  // --network=host on InfiniBand/RoCE nodes.
+  "runArgs": ["--shm-size=16g", "--cap-add=SYS_PTRACE", "--ulimit", "memlock=-1:-1"],
   "features": {
     // The one MPI of this image; infra and application Features that need MPI install after it.
-    "harbor.will/willmat/wise/infra/openmpi:1": {},
+    "harbor.will/willmat/wise/infra/openmpi:2": {},
     "harbor.will/willmat/wise/toolchains/python:1": {},
     "harbor.will/willmat/wise/toolchains/conda:1": {},
     "harbor.will/willmat/wise/toolchains/uv:1": {},
     "harbor.will/willmat/wise/toolchains/rust:1": {},
     "harbor.will/willmat/wise/toolchains/nodejs:1": {},
+    // Parallel I/O and the distributed eigensolver for large systems.
+    "harbor.will/willmat/wise/infra/hdf5:1": {},
+    "harbor.will/willmat/wise/infra/netcdf:1": {},
+    "harbor.will/willmat/wise/infra/elpa:1": { "cudaArch": "80" },
     "harbor.will/willmat/wise/applications/numpy:1": {},
     "harbor.will/willmat/wise/applications/mpi4py:1": {},
-    // GPU builds against the HPC SDK of the CUDA base image, targeting A100.
-    "harbor.will/willmat/wise/applications/lammps:1": { "kokkosCudaArch": "AMPERE80" },
-    "harbor.will/willmat/wise/applications/quantum-espresso:1": { "cudaCC": "80" },
-    "harbor.will/willmat/wise/applications/cp2k:1": { "gpuVersion": "A100" },
+    // GPU builds against the HPC SDK of the CUDA base image: tuned for A100 (sm_80); QE also carries
+    // H100 code (sm_90), Kokkos and CP2K embed sm_80 PTX that newer GPUs JIT-compile.
+    "harbor.will/willmat/wise/applications/lammps:2": { "variant": "cuda", "gpuArch": "AMPERE80", "extraPackages": "H5MD,NETCDF" },
+    "harbor.will/willmat/wise/applications/quantum-espresso:2": { "cudaCC": "80,90", "elpa": true, "hdf5": true },
+    "harbor.will/willmat/wise/applications/cp2k:2": { "gpuVersion": "A100", "elpa": true, "hdf5": true, "largeSystems": true },
     "harbor.will/willmat/wise/applications/wannier90:1": {},
     "harbor.will/willmat/wise/applications/packmol:1": {}
   }

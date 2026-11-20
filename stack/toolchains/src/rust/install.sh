@@ -1,7 +1,6 @@
 #!/bin/sh
 set -eu
+. /opt/wise/lib/wise/feature.sh rust
 
-export DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get install -y --no-install-recommends rustc cargo gcc
-rm -rf /var/lib/apt/lists/*
+wise_apt rustc cargo gcc
+wise_done

@@ -1,6 +1,9 @@
 {
   "id": "rust",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Rust",
-  "description": "Installs Rust and Cargo from Ubuntu."
+  "description": "Installs Rust and Cargo from Ubuntu.",
+  "dependsOn": {
+    "harbor.will/willmat/wise/infra/core:1": {}
+  }
 }

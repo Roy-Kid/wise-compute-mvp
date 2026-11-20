@@ -1,6 +1,9 @@
 {
   "id": "conda",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Conda",
-  "description": "Installs a checksum-verified distribution of Conda."
+  "description": "Installs a checksum-verified distribution of Conda.",
+  "dependsOn": {
+    "harbor.will/willmat/wise/infra/core:1": {}
+  }
 }

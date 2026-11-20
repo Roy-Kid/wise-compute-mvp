@@ -91,7 +91,7 @@ materials:
     - docker image inspect "$LOCAL_IMAGE" --format '{{.Id}} {{.Size}}' | tee image.txt
     # Unprivileged and offline.
     - >-
-      docker run --rm -i --user 65534:65534 --network none --tmpfs /tmp:mode=1777 -e WISE_VERIFY_GPU=0
+      docker run --rm -i --user 65534:65534 --network none --tmpfs /tmp:mode=1777 --shm-size=2g -e WISE_VERIFY_GPU=0
       --entrypoint /bin/sh "$LOCAL_IMAGE" -s "$VARIANT" < stack/delivery/verify.sh
     - |
       if [ -n "${target:-}" ]; then

@@ -1,11 +1,15 @@
 {
   "id": "scalapack",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "name": "ScaLAPACK",
-  "description": "Builds ScaLAPACK 2.2.3 into /opt/wise against the image's MPI and OpenBLAS.",
+  "description": "Builds ScaLAPACK 2.2.3 into /opt/wise against the image's MPI and OpenBLAS. On the CUDA base image it also builds an nvfortran copy into /opt/wise/nvhpc against the HPC SDK's BLAS/LAPACK, for nvfortran programs that must not load GCC's OpenMP runtime.",
   "dependsOn": {
-    "harbor.will/willmat/wise/infra/openmp:1": {},
-    "harbor.will/willmat/wise/infra/linear-algebra:1": {}
+    "harbor.will/willmat/wise/infra/core:1": {},
+    "harbor.will/willmat/wise/infra/openmp:2": {},
+    "harbor.will/willmat/wise/infra/linear-algebra:2": {}
   },
-  "installsAfter": ["harbor.will/willmat/wise/infra/openmpi:1", "harbor.will/willmat/wise/infra/mpich:1"]
+  "installsAfter": [
+    "harbor.will/willmat/wise/infra/openmpi:2",
+    "harbor.will/willmat/wise/infra/mpich:2"
+  ]
 }

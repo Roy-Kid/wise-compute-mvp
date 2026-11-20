@@ -1,0 +1,23 @@
+{
+  "id": "elpa",
+  "version": "1.0.0",
+  "name": "ELPA",
+  "description": "Builds ELPA 2026.02.002 (OpenMP, AVX2 kernels) into /opt/wise against the image's MPI, ScaLAPACK and OpenBLAS: the distributed eigensolver of Quantum ESPRESSO and CP2K. On the CUDA base image the GCC build adds NVIDIA GPU kernels, and an nvfortran build (no OpenMP, SDK BLAS) goes to /opt/wise/nvhpc for nvfortran programs.",
+  "options": {
+    "cudaArch": {
+      "type": "string",
+      "default": "80",
+      "description": "Compute capability of the GPU kernels on the CUDA base image (sm_<value>)."
+    }
+  },
+  "dependsOn": {
+    "harbor.will/willmat/wise/infra/core:1": {},
+    "harbor.will/willmat/wise/infra/openmp:2": {},
+    "harbor.will/willmat/wise/infra/linear-algebra:2": {},
+    "harbor.will/willmat/wise/infra/scalapack:1": {}
+  },
+  "installsAfter": [
+    "harbor.will/willmat/wise/infra/openmpi:2",
+    "harbor.will/willmat/wise/infra/mpich:2"
+  ]
+}
