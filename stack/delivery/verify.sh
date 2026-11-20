@@ -127,11 +127,8 @@ echo "$ompi" | grep -q '^mpi_built_with_cuda_support:value:true$' || fail "Open 
 for module in cuda cuda_gdrcopy; do test -e "/opt/wise/lib/ucx/libuct_$module.so" || fail "UCX lacks $module"; done
 [ "${WISE_VERIFY_GPU:-1}" = 1 ] || exit 0
 nvidia-smi -L
-# CUDA 12.9 needs driver >= 575 natively; data-center GPUs on older drivers run through the forward
-# compatibility package (WISE_CUDA_COMPAT=1 accepts that).
 driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1)
-[ "${driver%%.*}" -ge 575 ] || [ "${WISE_CUDA_COMPAT:-0}" = 1 ] \
-    || fail "driver $driver is older than 575 (CUDA 12.9); set WISE_CUDA_COMPAT=1 on data-center GPUs with forward compatibility"
+[ "${driver%%.*}" -ge 575 ] || fail "CUDA delivery requires NVIDIA driver 575 or newer (found $driver)"
 # Run on the device: KOKKOS must initialize the GPU and finish both runs, PPPM with cuFFT.
-lmp -k on g 1 -sf kk -in in.lj -log none -screen none
+lmp -k on g 1 -sf kk -var ranks 1 -in in.lj -log none -screen none
 lmp -k on g 1 -sf kk -in in.pppm -log none -screen none

@@ -1,32 +1,25 @@
 # WiseHub
 
-WiseHub 把 Dev Container 工作区构建成镜像，并按 digest 推送和拉取。科学计算镜像按五层分级组织，交付 CPU 与 CUDA 两版材料计算镜像。
+WiseHub 将 Dev Container 工作区构建为镜像，按 digest 推拉 OCI 镜像，并发布 Dev Container Feature。仓库包含 CPU 和 CUDA 两套材料计算镜像配置。
 
-| 目录 | 内容 |
-| --- | --- |
-| [`cli/`](cli) | `wisehub`，Registry 系统的一期 SDK：`image build`、`image push`、`image pull`、`feature publish`，见 [命令协议](docs/protocol-v1.md) |
-| [`stack/`](stack) | 五层分级：系统基座 → infra → 工具链 → 科学应用 → 最终交付，见其 [README](stack/README.md) |
-| [`docs/`](docs) | [命令协议](docs/protocol-v1.md)、[roadmap](docs/roadmap.md) |
+- [CLI 命令协议](docs/protocol-v1.md)
+- [计算栈、运行与验收](stack/README.md)
+- [待办](docs/roadmap.md)
 
-## 开发
+## 本地开发
 
-需要 Node.js 22.18+。构建镜像需要 Docker 与 Buildx。
+需要 Node.js 22.18+。构建镜像还需要 Docker 和 Buildx。
 
 ```bash
-npm ci        # 安装依赖并编译 cli
-npm test      # cli 测试与 stack 静态测试，无需 Docker
+npm ci
+npm test
 npx wisehub image build --workspace-folder stack/delivery/cpu --local-features stack --platform linux/amd64 --image wise-compute:materials-cpu
 ```
 
 ## CI/CD
 
-[`.gitlab-ci.yml`](.gitlab-ci.yml)，需要支持 privileged Docker-in-Docker 的 linux/amd64 runner。
+[GitLab CI](.gitlab-ci.yml) 在 MR、主分支和 tag 上运行测试及打包检查。镜像相关改动触发 CPU/CUDA 构建和离线验收，需要支持 privileged Docker-in-Docker 的 linux/amd64 runner。
 
-| 作业 | 触发 | 内容 |
-| --- | --- | --- |
-| test | MR、main、tag | `npm test`，打包检查 |
-| features | 推送 tag | `wisehub feature publish` 按层发布 Feature 到 `harbor.will/willmat/wise` |
-| materials（cpu、cuda 两路） | `stack/`、`cli/` 有改动，或 tag | 构建 `stack/delivery/<variant>`（MR、main 用 `--local-features stack`，tag 用已发布的 Feature）；非 root、断网运行 `verify.sh`（runner 无 GPU，CUDA 版不做设备运行） |
-| materials（tag） | 推送 tag | 以上之外：tag 已存在则失败；推送到 `harbor.will/willmat/wise-compute-runtime:<tag>-cpu` 和 `<tag>-cuda`；产出 `release.json` 发布记录（含 Feature 锁文件） |
+推送 Git tag 会发布 Feature、构建并推送 `harbor.will/willmat/wise-compute-runtime:<tag>-cpu` 和对应的 `<tag>-cuda`，并生成包含 Feature 锁定信息的 `release.json`。镜像 tag 已存在时发布失败。
 
-推送需要 CI/CD 变量 `HARBOR_USER`、`HARBOR_PASSWORD`（masked、protected）和 `HARBOR_CA`（文件变量，Will Root CA）。
+发布需要设置 `HARBOR_USER` 和 `HARBOR_PASSWORD`（masked、protected），以及包含 Will Root CA 的文件变量 `HARBOR_CA`。
