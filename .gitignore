@@ -1,3 +1,10 @@
 node_modules/
 dist/
 build/
+__pycache__/
+wisehub-local-*/
+devcontainer.wisehub-local-*.json
+.venv/
+.bin/
+.pytest_cache/
+.ruff_cache/

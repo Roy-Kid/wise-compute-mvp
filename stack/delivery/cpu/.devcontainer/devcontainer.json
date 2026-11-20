@@ -1,0 +1,24 @@
+{
+  "name": "WiseHub materials CPU",
+  // Builds on the cpu base tier; every Feature is a published reference (see stack/README.md).
+  "build": {
+    "dockerfile": "../../../base/cpu/.devcontainer/Dockerfile",
+    "context": "../../../base/cpu/.devcontainer"
+  },
+  "features": {
+    // The one MPI of this image; infra and application Features that need MPI install after it.
+    "harbor.will/willmat/wise/infra/openmpi:1": {},
+    "harbor.will/willmat/wise/toolchains/python:1": {},
+    "harbor.will/willmat/wise/toolchains/conda:1": {},
+    "harbor.will/willmat/wise/toolchains/uv:1": {},
+    "harbor.will/willmat/wise/toolchains/rust:1": {},
+    "harbor.will/willmat/wise/toolchains/nodejs:1": {},
+    "harbor.will/willmat/wise/applications/numpy:1": {},
+    "harbor.will/willmat/wise/applications/mpi4py:1": {},
+    "harbor.will/willmat/wise/applications/lammps:1": {},
+    "harbor.will/willmat/wise/applications/quantum-espresso:1": {},
+    "harbor.will/willmat/wise/applications/cp2k:1": {},
+    "harbor.will/willmat/wise/applications/wannier90:1": {},
+    "harbor.will/willmat/wise/applications/packmol:1": {}
+  }
+}

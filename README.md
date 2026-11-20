@@ -1,47 +1,32 @@
 # WiseHub
 
-WiseHub 用官方 Dev Container 工具链构建 CPU 和 CUDA 两个 all-in-one 科学计算镜像，并按 digest 推送和拉取。
+WiseHub 把 Dev Container 工作区构建成镜像，并按 digest 推送和拉取。科学计算镜像按五层分级组织，交付 CPU 与 CUDA 两版材料计算镜像。
 
 | 目录 | 内容 |
 | --- | --- |
-| [`cli/`](cli) | `wisehub` 命令行：`image build`、`image push`、`image pull` |
-| [`stack/`](stack) | 镜像配方：Feature 集合、[`stack.json`](stack/stack.json)、CPU/CUDA Dockerfile、验收脚本 |
-| [`docs/`](docs) | [架构](docs/architecture.md)、[命令协议](docs/protocol-v1.md)、[roadmap](docs/roadmap.md) |
-
-镜像内容：OpenMP、Open MPI、OpenBLAS/LAPACK/FFTW、ScaLAPACK；Python、Conda、uv、Rust、Node.js；NumPy、mpi4py、LAMMPS、CP2K、Quantum ESPRESSO、Wannier90、Packmol。CUDA 版另含 GPU 构建的 `lmp-cuda`。
+| [`cli/`](cli) | `wisehub`，Registry 系统的一期 SDK：`image build`、`image push`、`image pull`、`feature publish`，见 [命令协议](docs/protocol-v1.md) |
+| [`stack/`](stack) | 五层分级：系统基座 → infra → 工具链 → 科学应用 → 最终交付，见其 [README](stack/README.md) |
+| [`docs/`](docs) | [命令协议](docs/protocol-v1.md)、[roadmap](docs/roadmap.md) |
 
 ## 开发
 
-需要 Node.js 22.18+。构建和 Feature 测试需要 Docker 与 Buildx。
+需要 Node.js 22.18+。构建镜像需要 Docker 与 Buildx。
 
 ```bash
-npm ci                              # 安装依赖并编译 cli
-npm test                            # 两个 workspace 的静态测试，无需 Docker
-npm run test:features -w stack      # 在容器中逐个安装并测试 Feature
+npm ci        # 安装依赖并编译 cli
+npm test      # cli 测试与 stack 静态测试，无需 Docker
+npx wisehub image build --workspace-folder stack/delivery/cpu --local-features stack --platform linux/amd64 --image wise-compute:materials-cpu
 ```
 
-## 构建与验收
+## CI/CD
 
-```bash
-npm run render -w stack             # 生成 stack/build/recipes/{cpu,cuda}
-for variant in cpu cuda; do
-  npx wisehub image build --workspace-folder "stack/build/recipes/$variant" \
-    --platform linux/amd64 --image "wise-compute:$variant"
-done
+[`.gitlab-ci.yml`](.gitlab-ci.yml)，需要支持 privileged Docker-in-Docker 的 linux/amd64 runner。
 
-docker run --rm --mount "type=bind,src=$PWD/stack/recipes,dst=/checks,readonly" \
-  --entrypoint /bin/sh wise-compute:cpu /checks/verify.sh cpu
-docker run --rm --gpus all --mount "type=bind,src=$PWD/stack/recipes,dst=/checks,readonly" \
-  --entrypoint /bin/sh wise-compute:cuda /checks/verify.sh cuda
-```
+| 作业 | 触发 | 内容 |
+| --- | --- | --- |
+| test | MR、main、tag | `npm test`，打包检查 |
+| features | 推送 tag | `wisehub feature publish` 按层发布 Feature 到 `harbor.will/willmat/wise` |
+| materials（cpu、cuda 两路） | `stack/`、`cli/` 有改动，或 tag | 构建 `stack/delivery/<variant>`（MR、main 用 `--local-features stack`，tag 用已发布的 Feature）；非 root、断网运行 `verify.sh`（runner 无 GPU，CUDA 版不做设备运行） |
+| materials（tag） | 推送 tag | 以上之外：tag 已存在则失败；推送到 `harbor.will/willmat/wise-compute-runtime:<tag>-cpu` 和 `<tag>-cuda`；产出 `release.json` 发布记录（含 Feature 锁文件） |
 
-渲染出的工作区是标准 Dev Container 配置，也可以直接交给 `devcontainer build`。
-
-## 常见修改
-
-| 目的 | 修改 |
-| --- | --- |
-| 增加软件 | 新建 `stack/features/src/<id>` 与 `test/<id>`，在 `stack.json` 的相应层加入 id |
-| 升级系统包 | 修改 `stack.json` 的 `aptSnapshot` |
-| 升级基座镜像 | 修改 `stack.json` 中对应 `*_IMAGE` 的 digest |
-| 升级 pip/直链软件 | 修改对应 Feature 的版本选项或 `install.sh` 中的版本与校验值，并提升 Feature `version` |
+推送需要 CI/CD 变量 `HARBOR_USER`、`HARBOR_PASSWORD`（masked、protected）和 `HARBOR_CA`（文件变量，Will Root CA）。

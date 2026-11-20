@@ -1,16 +1,24 @@
 {
   "name": "wisehub",
-  "version": "0.2.0",
-  "description": "Build Dev Container workspaces into images and move them through OCI registries by digest.",
+  "version": "0.3.0",
+  "description": "Registry SDK for WiseHub: build Dev Container workspaces into images, publish Feature stacks, and move images through OCI registries by digest.",
   "license": "BSD-3-Clause",
   "type": "module",
-  "engines": { "node": ">=22.18" },
-  "bin": { "wisehub": "dist/cli.js" },
-  "files": ["dist"],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "bin": {
+    "wisehub": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepare": "npm run build",
-    "test": "tsc -p . && node --test test/*.test.ts"
+    "test": "node --test test/*.test.ts"
   },
-  "dependencies": { "@devcontainers/cli": "0.90.0" }
+  "dependencies": {
+    "@devcontainers/cli": "0.90.0"
+  }
 }

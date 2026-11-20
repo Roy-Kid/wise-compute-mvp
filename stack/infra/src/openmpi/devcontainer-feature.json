@@ -1,0 +1,9 @@
+{
+  "id": "openmpi",
+  "version": "1.0.0",
+  "name": "Open MPI",
+  "description": "Builds Open MPI 5.0.11 into /opt/wise; CUDA-aware when the base image provides CUDA_HOME. The default MPI of every delivery. An image holds exactly one MPI Feature.",
+  "dependsOn": {
+    "harbor.will/willmat/wise/infra/openmp:1": {}
+  }
+}

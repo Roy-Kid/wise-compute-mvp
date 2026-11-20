@@ -1,6 +1,6 @@
 # WiseHub 命令协议 v1
 
-`wisehub` 只提供三个命令。其他 Dev Container 操作（`up`、`exec`、`features`、`templates` 等）直接使用官方 `devcontainer` CLI。所有结果以 JSON 写到 stdout，构建和传输进度写到 stderr。
+`wisehub` 是 Registry 系统的一期 SDK，提供镜像的构建、推送、拉取和 Feature 集合的发布。其他 Dev Container 操作（`up`、`exec`、`features info`、`upgrade` 等）直接使用官方 `devcontainer` CLI。所有结果以 JSON 写到 stdout，构建和传输进度写到 stderr。
 
 | 退出码 | 含义 |
 | --- | --- |
@@ -11,7 +11,7 @@
 ## `wisehub image build`
 
 ```text
-wisehub image build [--workspace-folder DIR] [--config FILE] [--platform OS/ARCH]
+wisehub image build [--workspace-folder DIR] [--config FILE] [--platform OS/ARCH] [--local-features STACK]
                     (--image NAME | --service-image SERVICE=NAME ...) [-- devcontainer build flags]
 ```
 
@@ -20,7 +20,9 @@ wisehub image build [--workspace-folder DIR] [--config FILE] [--platform OS/ARCH
 - 单镜像先以唯一临时名 `wise-build/staging:<uuid>` 构建，按镜像 ID 打上 `--image`，再删除临时名，因此并发构建不会互相串号。
 - Compose 按 `--service-image` 声明输出，名称须与 Compose 配置一致。
 - 指定 `--platform` 时校验实际平台。
-- `--` 之后的参数原样传给 `devcontainer build`，例如 `--experimental-frozen-lockfile`。决定输出的参数（`--image-name`、`--push`、`--output` 等）被拒绝；需要这些模式时直接用 `devcontainer`。
+- `--local-features STACK`：把配置及 Feature 中指向 STACK 内 Feature 的注册表引用（`REGISTRY/NAMESPACE/COLLECTION/ID:TAG`，`STACK/COLLECTION/src/ID` 存在且版本满足 TAG）临时改写为本地副本后构建，用于开发和 MR。副本放在原配置旁，构建后删除，仓库不变；此模式不使用锁文件（`--no-lockfile`）。TAG 与源码版本不符时拒绝构建。
+- 不带 `--local-features` 时按注册表引用构建，官方 CLI 生成或校验 `devcontainer-lock.json`。
+- `--` 之后的参数原样传给 `devcontainer build`，例如 `--frozen-lockfile`。决定输出的参数（`--image-name`、`--push`、`--output`、`--no-lockfile` 等）被拒绝；需要这些模式时直接用 `devcontainer`。
 
 输出：`{ engineVersion, images: [{ reference, id, platform, service? }] }`。
 
@@ -40,22 +42,33 @@ wisehub image build [--workspace-folder DIR] [--config FILE] [--platform OS/ARCH
 
 输出：`{ digest, reference, image: { reference, id, platform }, platformManifestDigest? }`。
 
+## `wisehub feature publish STACK --registry HOST --namespace NAMESPACE`
+
+把 `STACK/<collection>/src` 下的每个 Feature 集合发布到 `HOST/NAMESPACE/<collection>`，Feature 引用为 `HOST/NAMESPACE/<collection>/<id>:<version>`：
+
+1. 发布前检查每个 Feature 的 `dependsOn` 与 `installsAfter`：必须是 `HOST/NAMESPACE/…` 下的引用，指向 STACK 内存在的 Feature，且 TAG 与其源码版本相符。任一不满足则什么都不发布。
+2. 按集合间依赖排序（被依赖的集合先发布），有环则拒绝。
+3. 逐个调用官方 `devcontainer features publish`。已存在的版本被跳过，不会覆盖；新版本同时打上 `MAJOR`、`MAJOR.MINOR`、`MAJOR.MINOR.PATCH` 和 `latest`。
+
+输出：`[{ collection, namespace, features: { <id>: { publishedTags, digest, version } } }]`，即官方 CLI 的发布结果。
+
 ## 错误分类
 
 Docker 只以文本报告 registry 错误，`docker.ts` 按顺序匹配：`conflict`、`authentication`、`permission`、`missing`、`temporary`，其余为 `backend`；读回不一致为 `integrity`。Docker 对未登录和无权限都输出 `denied: requested access to the resource is denied`，此时报告为 `permission`。
 
 ## 凭据与依赖
 
-凭据和 TLS 信任来自运行环境的 Docker 配置（`docker login`、`/etc/docker/certs.d`）。推送凭据须同时具备拉取权限以读回 manifest。需要 Docker Engine API 1.49+ 和 Buildx。
+凭据和 TLS 信任来自运行环境：镜像操作用 Docker 配置（`docker login`、`/etc/docker/certs.d`）；Feature 的发布与解析由官方 CLI 完成，读取同一份 Docker 凭据，私有 CA 通过 `NODE_EXTRA_CA_CERTS` 信任。推送凭据须同时具备拉取权限以读回 manifest。需要 Docker Engine API 1.49+ 和 Buildx。
 
 ## Harbor 示例
 
 ```bash
 npm ci
-npm run render -w stack -- cpu
-npx wisehub image build --workspace-folder stack/build/recipes/cpu --platform linux/amd64 --image wise-compute:cpu
-npx wisehub image push wise-compute:cpu harbor.will/wise-compute/cpu:v1
-npx wisehub image pull harbor.will/wise-compute/cpu@sha256:<digest> --platform linux/amd64
+export NODE_EXTRA_CA_CERTS=/path/to/will-root-ca.pem
+npx wisehub feature publish stack --registry harbor.will --namespace willmat/wise
+npx wisehub image build --workspace-folder stack/delivery/cpu --platform linux/amd64 --image wise-compute:materials-cpu
+npx wisehub image push wise-compute:materials-cpu harbor.will/willmat/wise-compute-runtime:v1-cpu
+npx wisehub image pull harbor.will/willmat/wise-compute-runtime@sha256:<digest> --platform linux/amd64
 ```
 
 ## 上游参考

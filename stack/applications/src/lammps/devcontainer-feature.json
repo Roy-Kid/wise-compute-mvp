@@ -1,0 +1,19 @@
+{
+  "id": "lammps",
+  "version": "1.0.0",
+  "name": "LAMMPS",
+  "description": "Builds LAMMPS stable_30Sep2026_update1 (lmp) into /opt/wise with the image's MPI, FFTW, OpenBLAS and the OPENMP package. With kokkosCudaArch it also builds KOKKOS for that GPU with cuFFT from the CUDA base image.",
+  "options": {
+    "kokkosCudaArch": {
+      "type": "string",
+      "proposals": ["", "VOLTA70", "AMPERE80", "ADA89", "HOPPER90"],
+      "default": "",
+      "description": "Kokkos GPU architecture (Kokkos_ARCH_<value>); requires the CUDA base image. Empty builds the CPU-only binary."
+    }
+  },
+  "dependsOn": {
+    "harbor.will/willmat/wise/infra/openmp:1": {},
+    "harbor.will/willmat/wise/infra/linear-algebra:1": {}
+  },
+  "installsAfter": ["harbor.will/willmat/wise/infra/openmpi:1", "harbor.will/willmat/wise/infra/mpich:1"]
+}

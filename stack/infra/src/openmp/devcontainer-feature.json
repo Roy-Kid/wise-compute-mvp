@@ -1,0 +1,10 @@
+{
+  "id": "openmp",
+  "version": "1.0.0",
+  "name": "Compilers and OpenMP",
+  "description": "GCC, G++ and gfortran with the OpenMP runtime, CMake and git: the build toolchain of every source-built Feature. Source-built software installs under /opt/wise, which this Feature puts on PATH and registers with the dynamic linker.",
+  "containerEnv": {
+    "PATH": "/opt/wise/bin:${PATH}",
+    "OMP_NUM_THREADS": "1"
+  }
+}

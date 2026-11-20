@@ -1,0 +1,9 @@
+{
+  "id": "mpich",
+  "version": "1.0.0",
+  "name": "MPICH",
+  "description": "Builds MPICH 4.3.2 into /opt/wise as the alternative to openmpi. An image holds exactly one MPI Feature; switching requires rebuilding every MPI binding.",
+  "dependsOn": {
+    "harbor.will/willmat/wise/infra/openmp:1": {}
+  }
+}

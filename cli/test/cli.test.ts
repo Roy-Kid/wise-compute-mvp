@@ -34,14 +34,17 @@ const cli = (...args: string[]) => spawnSync(process.execPath,
   [join(import.meta.dirname, "../src/cli.ts"), ...args], { encoding: "utf8" });
 
 describe("command line", () => {
-  test("help lists exactly the three image commands", () => {
+  test("help lists the image and feature commands", () => {
     const help = cli("image", "--help");
     assert.equal(help.status, 0);
-    for (const command of ["build", "push", "pull"]) assert.match(help.stdout, new RegExp(`wisehub image ${command}\\b`));
+    for (const command of ["image build", "image push", "image pull", "feature publish"]) {
+      assert.match(help.stdout, new RegExp(`wisehub ${command}\\b`));
+    }
   });
 
   test("unknown commands and bad arguments are usage errors, not forwarded", () => {
-    for (const args of [["image", "exec"], ["compute"], ["image", "push", "only-one"], ["image", "pull", "--bogus", "x"]]) {
+    for (const args of [["image", "exec"], ["compute"], ["toString", "x"], ["image", "push", "only-one"],
+      ["image", "pull", "--bogus", "x"], ["feature", "publish", "stack"], ["feature", "pack"]]) {
       const result = cli(...args);
       assert.equal(result.status, 2, args.join(" "));
       assert.match(result.stderr, /^wisehub: /);

@@ -1,6 +1,0 @@
-{
-  "id": "scalapack",
-  "version": "1.0.0",
-  "name": "ScaLAPACK",
-  "description": "Installs ScaLAPACK built for Open MPI."
-}

@@ -2,11 +2,15 @@
   "name": "wisehub-monorepo",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.18" },
-  "workspaces": ["cli", "stack"],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "workspaces": [
+    "cli"
+  ],
   "scripts": {
     "build": "npm run build -w cli",
-    "test": "npm test --workspaces"
+    "test": "tsc -p . && node --test cli/test/*.test.ts stack/test/*.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

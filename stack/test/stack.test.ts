@@ -1,122 +1,120 @@
+// Static checks for the five tiers of stack/. Building and running the images happens in CI.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { accessSync, constants, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { after, describe, test } from "node:test";
-import {
-  devcontainer, featureIds, featuresRoot, installOrder, loadStack, readFeature, recipesRoot, renderRecipe,
-} from "../src/stack.ts";
+import { delimiter, join } from "node:path";
+import { test } from "node:test";
+import { devcontainerCli } from "../../cli/src/devcontainer.ts";
+import { parseFeatureReference, publishOrder, readStack, stageLocalFeatures } from "../../cli/src/features.ts";
 
-const scratch = mkdtempSync(join(tmpdir(), "wise-stack-"));
-after(() => rmSync(scratch, { recursive: true, force: true }));
-const stack = loadStack();
-const cpuBase = stack.variants.cpu.buildArgs.BASE_IMAGE;
+const stack = join(import.meta.dirname, "..");
+const tiers = ["base", "infra", "toolchains", "applications", "delivery"] as const;
+const featureTiers = ["infra", "toolchains", "applications"] as const;
+const variants = ["cpu", "cuda"];
 
-/** resolve-dependencies prints log lines before its JSON graph. */
-function resolvedOrder(workspace: string): string[] {
-  const output = devcontainer(["features", "resolve-dependencies", "--workspace-folder", workspace]);
-  const graph = JSON.parse(output.slice(output.indexOf("\n{") + 1)) as { installOrder: { id: string }[] };
-  return graph.installOrder.map(item => item.id);
-}
+// Every Feature and delivery refers to Features by their published reference under this prefix.
+const prefix = "harbor.will/willmat/wise";
+const features = readStack(stack).map(feature => ({ ...feature, install: readFileSync(join(feature.dir, "install.sh"), "utf8") }));
+const reference = (id: string) => {
+  const feature = features.find(item => item.id === id)!;
+  return `${prefix}/${feature.collection}/${id}:${feature.version.split(".")[0]}`;
+};
+const tierOf = (collection: string) => featureTiers.indexOf(collection as typeof featureTiers[number]);
 
-describe("Feature collection", () => {
-  for (const id of featureIds()) {
-    test(`${id} follows the Feature contract`, () => {
-      const metadata = readFeature(id);
-      assert.equal(metadata.id, id);
-      assert.match(metadata.version, /^\d+\.\d+\.\d+$/);
-      // Install order belongs to recipes; cross-Feature references would break once published to OCI.
-      assert.equal(metadata.dependsOn, undefined);
-      assert.equal(metadata.installsAfter, undefined);
-
-      const install = join(featuresRoot, "src", id, "install.sh");
-      accessSync(install, constants.X_OK);
-      assert.match(readFileSync(install, "utf8"), /^#!\/bin\/sh\nset -eu\n/);
-      execFileSync("sh", ["-n", install]);
-
-      const tests = join(featuresRoot, "test", id);
-      const scenarioFile = join(tests, "scenarios.json");
-      if (!existsSync(scenarioFile)) {
-        execFileSync("sh", ["-n", join(tests, "test.sh")]);
-        return;
-      }
-      const scenarios = JSON.parse(readFileSync(scenarioFile, "utf8")) as Record<string, { image: string }>;
-      for (const [name, scenario] of Object.entries(scenarios)) {
-        assert.equal(scenario.image, cpuBase, `${id}/${name} must test on the CPU base image`);
-        execFileSync("sh", ["-n", join(tests, `${name}.sh`)]);
-      }
-    });
+// read-configuration resolves the Feature graph exactly as `devcontainer build` does, but first asks
+// Docker for an existing container; a stub that reports none keeps the test free of Docker.
+const stub = mkdtempSync(join(tmpdir(), "wise-docker-"));
+writeFileSync(join(stub, "docker"), "#!/bin/sh\nexit 0\n");
+chmodSync(join(stub, "docker"), 0o755);
+// Resolved offline from the stack sources, the same way `wisehub image build --local-features` builds.
+function installOrder(variant: string) {
+  const workspace = join(stack, "delivery", variant);
+  const { config, cleanup } = stageLocalFeatures(join(workspace, ".devcontainer", "devcontainer.json"), stack);
+  try {
+    const output = execFileSync(process.execPath, [devcontainerCli().script, "read-configuration", "--workspace-folder", workspace,
+      "--config", config, "--include-features-configuration"],
+    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, PATH: `${stub}${delimiter}${process.env.PATH}` } });
+    return (JSON.parse(output).featuresConfiguration.featureSets as { features: { id: string; value: Record<string, unknown> }[] }[])
+      .map(set => ({ id: set.features[0].id, options: set.features[0].value }));
+  } finally {
+    cleanup();
   }
+}
+const resolved = Object.fromEntries(variants.map(variant => [variant, installOrder(variant)]));
 
-  test("scenario prerequisites install in the declared order", () => {
-    // Mirrors how `features test` lays out a scenario: each Feature copied to .devcontainer/<id>.
-    for (const id of featureIds().filter(id => existsSync(join(featuresRoot, "test", id, "scenarios.json")))) {
-      const scenarios = JSON.parse(readFileSync(join(featuresRoot, "test", id, "scenarios.json"), "utf8"));
-      for (const [name, scenario] of Object.entries<{ features: object; overrideFeatureInstallOrder: string[] }>(scenarios)) {
-        const workspace = join(scratch, "scenario", id, name);
-        for (const feature of Object.keys(scenario.features)) {
-          cpSync(join(featuresRoot, "src", feature), join(workspace, ".devcontainer", feature), { recursive: true });
-        }
-        const config = { ...scenario, features: Object.fromEntries(Object.keys(scenario.features).map(f => [`./${f}`, {}])) };
-        writeFileSync(join(workspace, ".devcontainer", "devcontainer.json"), JSON.stringify(config));
-        assert.deepEqual(resolvedOrder(workspace), scenario.overrideFeatureInstallOrder);
-      }
-    }
-  });
-
-  test("the official CLI packages the whole collection", () => {
-    const output = join(scratch, "packages");
-    devcontainer(["features", "package", join(featuresRoot, "src"), "--output-folder", output]);
-    const collection = JSON.parse(readFileSync(join(output, "devcontainer-collection.json"), "utf8"));
-    assert.deepEqual(collection.features.map((item: { id: string }) => item.id).sort(), featureIds());
-  });
+test("stack/ has exactly the five tiers", () => {
+  for (const tier of tiers) assert.ok(existsSync(join(stack, tier)), tier);
 });
 
-describe("recipes", () => {
-  test("stack.json rejects unknown Features and unpinned images", () => {
-    const bad = join(scratch, "bad.json");
-    writeFileSync(bad, JSON.stringify({
-      aptSnapshot: "latest",
-      tiers: { compute: ["openmpi", "nope"] },
-      variants: { cpu: { buildArgs: { BASE_IMAGE: "ubuntu:24.04" } } },
-    }));
-    assert.throws(() => loadStack(bad), (error: Error) =>
-      /aptSnapshot/.test(error.message) && /unknown Feature nope/.test(error.message) &&
-      /cpu.BASE_IMAGE must be pinned/.test(error.message));
-  });
-
-  test("every variant applies the apt snapshot in its Dockerfile", () => {
-    for (const name of Object.keys(stack.variants)) {
-      const dockerfile = readFileSync(join(recipesRoot, name, "Dockerfile"), "utf8");
-      assert.match(dockerfile, /APT::Snapshot/);
-      assert.match(dockerfile, /^FROM \$\{BASE_IMAGE\}$/m);
-    }
-  });
-
-  for (const variant of Object.keys(stack.variants)) {
-    test(`the ${variant} recipe renders to a workspace the official CLI resolves in stack order`, () => {
-      const workspace = renderRecipe(stack, { variant, outDir: join(scratch, "local") });
-      const config = JSON.parse(readFileSync(join(workspace, ".devcontainer", "devcontainer.json"), "utf8"));
-      assert.equal(config.build.args.APT_SNAPSHOT, stack.aptSnapshot);
-      assert.deepEqual(resolvedOrder(workspace), installOrder(stack).map(id => `./features/${id}`));
-    });
+test("Features follow the native contract: id = directory, SemVer, strict POSIX install.sh", () => {
+  // readStack already rejects an id that differs from its directory.
+  assert.deepEqual([...new Set(features.map(feature => feature.collection))].sort(), [...featureTiers].sort());
+  for (const feature of features) {
+    assert.match(feature.version, /^\d+\.\d+\.\d+$/, feature.id);
+    assert.match(feature.install, /^#!\/bin\/sh\nset -eu\n/, feature.id);
+    execFileSync("sh", ["-n", join(feature.dir, "install.sh")]);
   }
+  assert.equal(new Set(features.map(feature => feature.id)).size, features.length, "Feature ids are unique across tiers");
+});
 
-  test("a registry render references published Features by exact version", () => {
-    const workspace = renderRecipe(stack, {
-      variant: "cpu", outDir: join(scratch, "oci"), featureRegistry: "harbor.will/wise-compute/features",
-    });
-    const config = JSON.parse(readFileSync(join(workspace, ".devcontainer", "devcontainer.json"), "utf8"));
-    assert.ok(Object.hasOwn(config.features, "harbor.will/wise-compute/features/openmpi:1.0.0"));
-    assert.equal(config.overrideFeatureInstallOrder[0], "harbor.will/wise-compute/features/openmp");
-    assert.equal(existsSync(join(workspace, ".devcontainer", "features")), false);
-  });
+test("dependencies are published references that only point to the same or a lower tier", () => {
+  for (const feature of features) {
+    for (const ref of feature.references) {
+      const target = parseFeatureReference(ref);
+      assert.equal(target.prefix, prefix, `${feature.id}: ${ref}`);
+      assert.equal(ref, reference(target.id), `${feature.id}: ${ref} names the tier and major version of ${target.id}`);
+      assert.ok(tierOf(target.collection) <= tierOf(feature.collection),
+        `${feature.collection}/${feature.id} must not depend on ${target.collection}/${target.id}`);
+    }
+  }
+  assert.deepEqual(publishOrder(features, prefix), [...featureTiers]);
+});
 
-  test("rendering replaces stale output", () => {
-    const outDir = join(scratch, "stale");
-    mkdirSync(join(outDir, "cpu", ".devcontainer", "features", "removed"), { recursive: true });
-    renderRecipe(stack, { variant: "cpu", outDir });
-    assert.deepEqual(readdirSync(join(outDir, "cpu", ".devcontainer", "features")).sort(), [...installOrder(stack)].sort());
-  });
+test("NVIDIA software comes only from the CUDA base image", () => {
+  for (const feature of features) {
+    assert.doesNotMatch(feature.install, /nvidia\.com|nvcr\.io|\/opt\/nvidia|\/usr\/local\/cuda|apt-get install[^\n]*(cuda|nvidia|nvhpc)/i,
+      `${feature.id} must use CUDA_HOME / NVHPC_ROOT from the base image`);
+  }
+  for (const variant of variants) {
+    assert.match(readFileSync(join(stack, "base", variant, ".devcontainer", "Dockerfile"), "utf8"), /^ARG BASE_IMAGE=\S+@sha256:[0-9a-f]{64}$/m);
+  }
+});
+
+test("each delivery builds on its own base and refers to Features only by published reference", () => {
+  for (const variant of variants) {
+    const config = readFileSync(join(stack, "delivery", variant, ".devcontainer", "devcontainer.json"), "utf8");
+    assert.match(config, new RegExp(`"dockerfile": "\\.\\./\\.\\./\\.\\./base/${variant}/\\.devcontainer/Dockerfile"`));
+    const refs = [...config.matchAll(/"([^"\s]+\/[^"\s]+:[^"\s]+)": \{/g)].map(match => match[1]);
+    assert.ok(refs.length > 0);
+    for (const ref of refs) assert.equal(ref, reference(parseFeatureReference(ref).id), `${variant}: ${ref}`);
+  }
+});
+
+test("each delivery installs one MPI, below everything that needs it, and no Feature twice", () => {
+  for (const [variant, order] of Object.entries(resolved)) {
+    const ids = order.map(item => item.id);
+    assert.equal(new Set(ids).size, ids.length, `${variant}: a Feature is installed twice`);
+    const mpi = ids.filter(id => id === "openmpi" || id === "mpich");
+    assert.equal(mpi.length, 1, `${variant}: select exactly one MPI Feature`);
+    const users = features.filter(f => f.references.includes(reference(mpi[0])) && ids.includes(f.id));
+    assert.ok(users.length >= 5, `${variant}: the MPI users are found`);
+    for (const user of users) assert.ok(ids.indexOf(mpi[0]) < ids.indexOf(user.id), `${variant}: ${mpi[0]} before ${user.id}`);
+    for (const id of ["lammps", "quantum-espresso", "cp2k", "wannier90", "packmol", "numpy", "mpi4py"]) assert.ok(ids.includes(id), `${variant}: ${id}`);
+  }
+});
+
+test("only the CUDA delivery requests GPU builds", () => {
+  const gpu = (variant: string) => resolved[variant].filter(item => Object.values(item.options ?? {}).some(Boolean)).map(item => item.id).sort();
+  assert.deepEqual(gpu("cpu"), []);
+  assert.deepEqual(gpu("cuda"), ["cp2k", "lammps", "quantum-espresso"]);
+});
+
+test("every Feature is used by a delivery, except the alternative MPI", () => {
+  const used = new Set(Object.values(resolved).flat().map(item => item.id));
+  assert.deepEqual(features.map(feature => feature.id).filter(id => !used.has(id)), ["mpich"]);
+});
+
+test("verify.sh is valid sh", () => {
+  execFileSync("sh", ["-n", join(stack, "delivery", "verify.sh")]);
 });

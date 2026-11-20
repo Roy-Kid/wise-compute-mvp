@@ -1,0 +1,11 @@
+{
+  "id": "scalapack",
+  "version": "1.0.0",
+  "name": "ScaLAPACK",
+  "description": "Builds ScaLAPACK 2.2.3 into /opt/wise against the image's MPI and OpenBLAS.",
+  "dependsOn": {
+    "harbor.will/willmat/wise/infra/openmp:1": {},
+    "harbor.will/willmat/wise/infra/linear-algebra:1": {}
+  },
+  "installsAfter": ["harbor.will/willmat/wise/infra/openmpi:1", "harbor.will/willmat/wise/infra/mpich:1"]
+}

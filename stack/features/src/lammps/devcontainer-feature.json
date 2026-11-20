@@ -1,6 +1,0 @@
-{
-  "id": "lammps",
-  "version": "1.0.0",
-  "name": "LAMMPS",
-  "description": "Installs the distribution build of LAMMPS."
-}

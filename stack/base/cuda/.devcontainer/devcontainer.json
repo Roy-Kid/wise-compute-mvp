@@ -1,0 +1,5 @@
+{
+  // Validates the base tier on its own; deliveries build from the same Dockerfile.
+  "name": "WiseHub base cuda",
+  "build": { "dockerfile": "Dockerfile" }
+}

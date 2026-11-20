@@ -1,6 +1,0 @@
-{
-  "id": "quantum-espresso",
-  "version": "1.0.0",
-  "name": "Quantum ESPRESSO",
-  "description": "Installs the distribution build of Quantum ESPRESSO."
-}

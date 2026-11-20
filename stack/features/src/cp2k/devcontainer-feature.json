@@ -1,6 +1,0 @@
-{
-  "id": "cp2k",
-  "version": "1.0.0",
-  "name": "CP2K",
-  "description": "Installs the distribution build of CP2K."
-}

@@ -1,0 +1,11 @@
+{
+  "id": "mpi4py",
+  "version": "1.0.0",
+  "name": "mpi4py",
+  "description": "Builds the hash-pinned mpi4py 4.1.2 sdist against the image's MPI into the environment of the python Feature.",
+  "dependsOn": {
+    "harbor.will/willmat/wise/infra/openmp:1": {},
+    "harbor.will/willmat/wise/toolchains/python:1": {}
+  },
+  "installsAfter": ["harbor.will/willmat/wise/infra/openmpi:1", "harbor.will/willmat/wise/infra/mpich:1"]
+}

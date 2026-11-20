@@ -1,0 +1,25 @@
+{
+  "name": "WiseHub materials CUDA",
+  // Builds on the cuda base tier; every Feature is a published reference (see stack/README.md).
+  "build": {
+    "dockerfile": "../../../base/cuda/.devcontainer/Dockerfile",
+    "context": "../../../base/cuda/.devcontainer"
+  },
+  "features": {
+    // The one MPI of this image; infra and application Features that need MPI install after it.
+    "harbor.will/willmat/wise/infra/openmpi:1": {},
+    "harbor.will/willmat/wise/toolchains/python:1": {},
+    "harbor.will/willmat/wise/toolchains/conda:1": {},
+    "harbor.will/willmat/wise/toolchains/uv:1": {},
+    "harbor.will/willmat/wise/toolchains/rust:1": {},
+    "harbor.will/willmat/wise/toolchains/nodejs:1": {},
+    "harbor.will/willmat/wise/applications/numpy:1": {},
+    "harbor.will/willmat/wise/applications/mpi4py:1": {},
+    // GPU builds against the HPC SDK of the CUDA base image, targeting A100.
+    "harbor.will/willmat/wise/applications/lammps:1": { "kokkosCudaArch": "AMPERE80" },
+    "harbor.will/willmat/wise/applications/quantum-espresso:1": { "cudaCC": "80" },
+    "harbor.will/willmat/wise/applications/cp2k:1": { "gpuVersion": "A100" },
+    "harbor.will/willmat/wise/applications/wannier90:1": {},
+    "harbor.will/willmat/wise/applications/packmol:1": {}
+  }
+}

@@ -1,6 +1,0 @@
-{
-  "id": "linear-algebra",
-  "version": "1.0.0",
-  "name": "OpenBLAS, LAPACK and FFTW",
-  "description": "Installs the CPU math libraries used by scientific builds."
-}

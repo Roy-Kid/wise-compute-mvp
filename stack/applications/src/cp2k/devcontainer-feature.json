@@ -1,0 +1,20 @@
+{
+  "id": "cp2k",
+  "version": "1.0.0",
+  "name": "CP2K",
+  "description": "Builds CP2K 2026.2 (cp2k.psmp) into /opt/wise with the image's MPI, FFTW, ScaLAPACK and OpenBLAS; libxc, libint, libxsmm and DBCSR come from CP2K's own checksum-verified toolchain. With gpuVersion it builds the CUDA version against the CUDA base image.",
+  "options": {
+    "gpuVersion": {
+      "type": "string",
+      "proposals": ["", "V100", "A100", "H100"],
+      "default": "",
+      "description": "CP2K GPU target; requires the CUDA base image. Empty builds the CPU version."
+    }
+  },
+  "dependsOn": {
+    "harbor.will/willmat/wise/infra/openmp:1": {},
+    "harbor.will/willmat/wise/infra/linear-algebra:1": {},
+    "harbor.will/willmat/wise/infra/scalapack:1": {}
+  },
+  "installsAfter": ["harbor.will/willmat/wise/infra/openmpi:1", "harbor.will/willmat/wise/infra/mpich:1"]
+}

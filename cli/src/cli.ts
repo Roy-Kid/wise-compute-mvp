@@ -2,13 +2,18 @@
 import { parseArgs } from "node:util";
 import { DevContainerBuilder } from "./build.ts";
 import { RegistryError } from "./docker.ts";
+import { FeaturePublisher } from "./features.ts";
 import { OciRegistry } from "./registry.ts";
 
 const usage = `Usage:
-  wisehub image build [--workspace-folder DIR] [--config FILE] [--platform OS/ARCH]
+  wisehub image build [--workspace-folder DIR] [--config FILE] [--platform OS/ARCH] [--local-features STACK]
                       (--image NAME | --service-image SERVICE=NAME ...) [-- devcontainer build flags]
   wisehub image push SOURCE REGISTRY/REPOSITORY:TAG
   wisehub image pull REGISTRY/REPOSITORY(:TAG|@DIGEST) [--platform OS/ARCH]
+  wisehub feature publish STACK --registry HOST --namespace NAMESPACE
+
+--local-features builds with the stack's Feature sources in place of their registry references.
+feature publish pushes each collection STACK/<collection>/src to HOST/NAMESPACE/<collection>, lowest first.
 
 Results are printed to stdout as JSON; progress goes to stderr.
 For any other Dev Container operation, run the devcontainer CLI directly.`;
@@ -29,6 +34,7 @@ async function build(args: string[]): Promise<void> {
       platform: { type: "string" },
       image: { type: "string" },
       "service-image": { type: "string", multiple: true },
+      "local-features": { type: "string" },
     },
   });
   const services = (values["service-image"] ?? []).map(entry => {
@@ -47,6 +53,7 @@ async function build(args: string[]): Promise<void> {
     config: values.config,
     platform: values.platform,
     output: values.image ? { image: values.image } : { services },
+    localFeatures: values["local-features"],
     args: delimiter === -1 ? [] : args.slice(delimiter + 1),
   }));
 }
@@ -65,15 +72,30 @@ async function pull(args: string[]): Promise<void> {
   print(await new OciRegistry().pull(positionals[0], values.platform));
 }
 
-const commands: Record<string, (args: string[]) => Promise<void>> = { build, push, pull };
+async function publish(args: string[]): Promise<void> {
+  const { values, positionals } = parseArgs({
+    args, allowPositionals: true,
+    options: { registry: { type: "string" }, namespace: { type: "string" } },
+  });
+  if (positionals.length !== 1 || !values.registry || !values.namespace) {
+    throw new UsageError("feature publish takes STACK, --registry and --namespace");
+  }
+  print(await new FeaturePublisher().publish(positionals[0], values.registry, values.namespace));
+}
+
+const commands: Record<string, Record<string, (args: string[]) => Promise<void>>> = {
+  image: { build, push, pull },
+  feature: { publish },
+};
 
 async function main([group, command, ...rest]: string[]): Promise<number> {
   if (!group || group === "--help" || group === "-h" ||
-      (group === "image" && (!command || command === "--help" || command === "-h"))) {
+      (Object.hasOwn(commands, group) && (!command || command === "--help" || command === "-h"))) {
     console.log(usage);
     return 0;
   }
-  const handler = group === "image" && command ? commands[command] : undefined;
+  const handler = Object.hasOwn(commands, group) && command && Object.hasOwn(commands[group], command)
+    ? commands[group][command] : undefined;
   if (!handler) throw new UsageError(`Unknown command: ${[group, command].filter(Boolean).join(" ")}`);
   await handler(rest);
   return 0;

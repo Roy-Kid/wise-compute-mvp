@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { createRequire } from "node:module";
-import { dirname, join, resolve } from "node:path";
+import { resolve } from "node:path";
+import { devcontainerCli } from "./devcontainer.ts";
 import { Docker } from "./docker.ts";
 import type { LocalImage } from "./docker.ts";
+import { stageLocalFeatures } from "./features.ts";
 import { checked, run } from "./process.ts";
 import type { Run } from "./process.ts";
 import { parsePlatform } from "./reference.ts";
@@ -16,7 +17,12 @@ export interface BuildRequest {
   config?: string;
   platform?: string;
   output: BuildOutput;
-  /** Extra `devcontainer build` flags, e.g. --experimental-frozen-lockfile. */
+  /**
+   * Stack directory whose Features replace their registry references for this build (development and
+   * merge requests). The lockfile does not apply to such a build.
+   */
+  localFeatures?: string;
+  /** Extra `devcontainer build` flags, e.g. --frozen-lockfile. */
   args?: readonly string[];
 }
 
@@ -28,15 +34,8 @@ export interface BuildResult {
 /** Flags this wrapper sets itself from the structured request. */
 const reservedFlags = new Set([
   "--workspace-folder", "--config", "--platform", "--image-name", "--push",
-  "--output", "--docker-path", "--help", "--version", "--",
+  "--output", "--docker-path", "--no-lockfile", "--help", "--version", "--",
 ]);
-
-/** The pinned official Dev Container CLI that ships as a dependency of this package. */
-function devcontainerCli(): { script: string; version: string } {
-  const require = createRequire(import.meta.url);
-  const manifest = require.resolve("@devcontainers/cli/package.json");
-  return { script: join(dirname(manifest), "devcontainer.js"), version: require(manifest).version };
-}
 
 /** Builds a Dev Container workspace into named local images and reports what Docker actually holds. */
 export class DevContainerBuilder {
@@ -64,8 +63,13 @@ export class DevContainerBuilder {
 
     const cli = devcontainerCli();
     const workspace = resolve(request.workspace);
+    const config = request.config ? resolve(workspace, request.config) : undefined;
+    const local = request.localFeatures
+      ? stageLocalFeatures(config ?? resolve(workspace, ".devcontainer/devcontainer.json"), request.localFeatures)
+      : undefined;
     const args = ["build", "--workspace-folder", workspace, "--docker-path", this.docker.binary];
-    if (request.config) args.push("--config", resolve(workspace, request.config));
+    if (local) args.push("--config", local.config, "--no-lockfile");
+    else if (config) args.push("--config", config);
     if (request.platform) args.push("--platform", request.platform);
     if (staging) args.push("--image-name", staging);
     try {
@@ -78,6 +82,7 @@ export class DevContainerBuilder {
       }));
       return { engineVersion: cli.version, images };
     } finally {
+      local?.cleanup();
       if (staging) await this.docker.removeImage(staging).catch(() => undefined);
     }
   }
