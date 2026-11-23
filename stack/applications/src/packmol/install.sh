@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh packmol
+wise_id=packmol
+. /opt/wise/lib/wise/feature.sh
 
 wise_require openmp
 wise_workdir

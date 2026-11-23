@@ -1,5 +1,6 @@
 # WiseHub Feature SDK. Every Feature's install.sh starts with
-#   . /opt/wise/lib/wise/feature.sh <id>
+#   wise_id=<id>
+#   . /opt/wise/lib/wise/feature.sh
 # and ends with wise_done. Features learn about each other only through the registry below, by id or by
 # capability, never by probing another Feature's files; their requirements are the wise_require* calls,
 # which stack/test/stack.test.ts reads to check dependsOn/installsAfter and every delivery.
@@ -9,7 +10,7 @@ WISE_PREFIX=/opt/wise
 # nvfortran builds of Fortran libraries on the CUDA base (Fortran modules are compiler specific).
 WISE_NVHPC_PREFIX=$WISE_PREFIX/nvhpc
 WISE_REGISTRY=$WISE_PREFIX/share/wise/features
-wise_id=${1:?usage: . feature.sh <feature id>}
+: "${wise_id:?set wise_id before sourcing feature.sh}"
 
 wise_fail() { echo "$wise_id: $*" >&2; exit 1; }
 

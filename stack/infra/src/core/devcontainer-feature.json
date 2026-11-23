@@ -1,6 +1,6 @@
 {
   "id": "core",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "WiseHub Feature core",
   "description": "The contract every WiseHub Feature builds on: the /opt/wise prefix (PATH, pkg-config, dynamic linker), the Feature SDK /opt/wise/lib/wise/feature.sh, and the registry of installed Features and capabilities that Features query instead of probing each other's files.",
   "containerEnv": {

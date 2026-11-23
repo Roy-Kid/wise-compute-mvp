@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh lammps
+wise_id=lammps
+. /opt/wise/lib/wise/feature.sh
 
 wise_require_capability mpi
 wise_require fftw

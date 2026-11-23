@@ -4,8 +4,8 @@
   "name": "MPICH",
   "description": "Builds MPICH 4.3.2 into /opt/wise with the ch4:ofi device on libfabric (InfiniBand/RoCE, EFA, shared memory), CUDA-aware on the CUDA base image. The alternative to openmpi; an image holds exactly one MPI Feature and switching requires rebuilding every MPI binding.",
   "dependsOn": {
-    "harbor.will/willmat/wise/infra/core:1": {},
-    "harbor.will/willmat/wise/infra/openmp:2": {},
-    "harbor.will/willmat/wise/infra/libfabric:1": {}
+    "harbor.will/wise/wise-compute-features/infra/core:1": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:2": {},
+    "harbor.will/wise/wise-compute-features/infra/libfabric:1": {}
   }
 }

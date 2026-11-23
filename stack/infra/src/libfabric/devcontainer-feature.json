@@ -4,8 +4,8 @@
   "name": "libfabric",
   "description": "Builds libfabric 2.7.0 (OFI) into /opt/wise with the verbs, EFA, shm and tcp providers and, on the CUDA base image, CUDA memory and GDRCopy. Open MPI's OFI path and MPICH's ch4:ofi device.",
   "dependsOn": {
-    "harbor.will/willmat/wise/infra/core:1": {},
-    "harbor.will/willmat/wise/infra/openmp:2": {},
-    "harbor.will/willmat/wise/infra/rdma:1": {}
+    "harbor.will/wise/wise-compute-features/infra/core:1": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:2": {},
+    "harbor.will/wise/wise-compute-features/infra/rdma:1": {}
   }
 }

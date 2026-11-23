@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh conda
+wise_id=conda
+. /opt/wise/lib/wise/feature.sh
 
 wise_apt ca-certificates curl
 

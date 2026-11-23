@@ -1,0 +1,11 @@
+{
+  "id": "materials-python",
+  "version": "1.0.0",
+  "name": "Materials Python tools",
+  "description": "Installs the locked materials analysis and simulation packages into the Python Feature's environment on linux/amd64.",
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:1": {},
+    "harbor.will/wise/wise-compute-features/toolchains/python:1": {},
+    "harbor.will/wise/wise-compute-features/applications/numpy:1": {}
+  }
+}

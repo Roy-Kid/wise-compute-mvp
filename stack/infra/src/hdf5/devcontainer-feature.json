@@ -4,11 +4,11 @@
   "name": "Parallel HDF5",
   "description": "Builds HDF5 2.2.0 into /opt/wise with MPI-IO (parallel), C, Fortran and zlib. On the CUDA base image it also builds an nvfortran copy into /opt/wise/nvhpc, since Fortran modules are compiler specific. Provider of LAMMPS H5MD and the HDF5 output of Quantum ESPRESSO and CP2K.",
   "dependsOn": {
-    "harbor.will/willmat/wise/infra/core:1": {},
-    "harbor.will/willmat/wise/infra/openmp:2": {}
+    "harbor.will/wise/wise-compute-features/infra/core:1": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:2": {}
   },
   "installsAfter": [
-    "harbor.will/willmat/wise/infra/openmpi:2",
-    "harbor.will/willmat/wise/infra/mpich:2"
+    "harbor.will/wise/wise-compute-features/infra/openmpi:2",
+    "harbor.will/wise/wise-compute-features/infra/mpich:2"
   ]
 }

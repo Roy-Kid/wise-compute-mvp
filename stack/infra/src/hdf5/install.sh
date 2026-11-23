@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh hdf5
+wise_id=hdf5
+. /opt/wise/lib/wise/feature.sh
 
 wise_require_capability mpi
 wise_apt zlib1g-dev

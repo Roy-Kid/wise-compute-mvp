@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh uv
+wise_id=uv
+. /opt/wise/lib/wise/feature.sh
 
 wise_apt ca-certificates curl
 

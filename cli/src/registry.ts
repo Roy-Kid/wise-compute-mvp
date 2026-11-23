@@ -28,17 +28,18 @@ export class OciRegistry {
   /**
    * Publishes one platform of `source` as `target` (REGISTRY/REPOSITORY:TAG) and confirms the
    * registry stores that exact image. Idempotent: if the tag already holds the source image,
-   * nothing is pushed.
+   * nothing is pushed. With immutable enabled, an existing tag for another image is a conflict.
    */
-  async push(source: string, target: string): Promise<PushResult> {
+  async push(source: string, target: string, { immutable = false } = {}): Promise<PushResult> {
     const { repository, tag } = parseRemoteReference(target);
     if (!tag) throw new Error(`Push needs an explicit tag, got ${target}`);
     const image = await this.docker.inspectImage(source);
     const result = (digest: string): PushResult => ({ tag: target, digest, reference: `${repository}@${digest}` });
 
     const current = await this.docker.describe(target);
-    if (current && await this.docker.configDigest(`${repository}@${current.digest}`) === image.id) {
-      return result(current.digest);
+    if (current) {
+      if (await this.docker.configDigest(`${repository}@${current.digest}`) === image.id) return result(current.digest);
+      if (immutable) throw new RegistryError("conflict", `${target} already points to a different image`);
     }
 
     await this.docker.tag(image.id, target);

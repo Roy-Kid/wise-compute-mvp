@@ -13,6 +13,6 @@
     "OMP_PROC_BIND": "close"
   },
   "dependsOn": {
-    "harbor.will/willmat/wise/infra/core:1": {}
+    "harbor.will/wise/wise-compute-features/infra/core:1": {}
   }
 }

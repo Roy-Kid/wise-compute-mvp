@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh openmpi
+wise_id=openmpi
+. /opt/wise/lib/wise/feature.sh
 
 wise_require ucx
 wise_require libfabric

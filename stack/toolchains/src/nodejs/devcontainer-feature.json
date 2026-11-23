@@ -4,6 +4,6 @@
   "name": "Node.js",
   "description": "Installs a checksum-verified distribution of Node.js.",
   "dependsOn": {
-    "harbor.will/willmat/wise/infra/core:1": {}
+    "harbor.will/wise/wise-compute-features/infra/core:1": {}
   }
 }

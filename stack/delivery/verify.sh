@@ -55,13 +55,35 @@ for binary in /opt/wise/bin/lmp /opt/wise/bin/pw.x /opt/wise/bin/cp2k.psmp \
 done
 test "$(command -v mpirun)" = /opt/wise/bin/mpirun
 
-"$WISE_VENV/bin/python" -c 'import numpy; assert numpy.dot([2], [3]) == 6'
 mpirun -n 2 "$WISE_VENV/bin/python" -c 'from mpi4py import MPI; assert MPI.COMM_WORLD.allreduce(1) == 2'
 cp2k.psmp --version
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 cd "$work"
+MPLCONFIGDIR="$work/matplotlib" MPLBACKEND=Agg "$WISE_VENV/bin/python" - <<'PY'
+import MDAnalysis
+import h5py
+import matplotlib.pyplot
+import numpy
+import pandas
+import phono3py
+import phonopy
+import pycalphad
+import pyscf
+import spglib
+from ase import Atoms
+from pymatgen.core import Lattice
+from scipy.linalg import det
+
+assert len(Atoms("Si")) == 1
+assert Lattice.cubic(2).volume == 8
+assert det(numpy.eye(2)) == 1
+with h5py.File("materials.h5", "w") as output:
+    output["result"] = pandas.Series([numpy.dot([2], [3])]).to_numpy()
+with h5py.File("materials.h5", "r") as output:
+    assert output["result"][0] == 6
+PY
 cat > in.lj <<'LAMMPS'
 units lj
 atom_style atomic

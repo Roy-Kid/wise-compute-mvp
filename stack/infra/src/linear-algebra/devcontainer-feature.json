@@ -7,7 +7,7 @@
     "OPENBLAS_NUM_THREADS": "1"
   },
   "dependsOn": {
-    "harbor.will/willmat/wise/infra/core:1": {},
-    "harbor.will/willmat/wise/infra/openmp:2": {}
+    "harbor.will/wise/wise-compute-features/infra/core:1": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:2": {}
   }
 }

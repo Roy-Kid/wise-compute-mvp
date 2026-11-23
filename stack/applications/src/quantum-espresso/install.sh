@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh quantum-espresso
+wise_id=quantum-espresso
+. /opt/wise/lib/wise/feature.sh
 
 wise_require_capability mpi
 wise_require fftw

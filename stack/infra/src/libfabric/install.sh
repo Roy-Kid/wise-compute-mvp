@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh libfabric
+wise_id=libfabric
+. /opt/wise/lib/wise/feature.sh
 
 wise_require rdma
 wise_workdir

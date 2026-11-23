@@ -8,6 +8,6 @@
     "PATH": "/opt/wise/venv/bin:${PATH}"
   },
   "dependsOn": {
-    "harbor.will/willmat/wise/infra/core:1": {}
+    "harbor.will/wise/wise-compute-features/infra/core:1": {}
   }
 }

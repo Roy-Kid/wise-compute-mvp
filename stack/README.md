@@ -5,7 +5,7 @@
 | [base](base) | CPU 用 Ubuntu 24.04，CUDA 用 NVIDIA HPC SDK 25.7（CUDA 12.9）及 GDRCopy。基座锁定 digest，apt 使用 Ubuntu 快照。 |
 | [infra](infra/src) | Feature SDK、编译器、MPI、互连、数学库和并行 I/O。 |
 | [toolchains](toolchains/src) | Python、Conda、uv、Rust 和 Node.js。 |
-| [applications](applications/src) | LAMMPS、Quantum ESPRESSO、CP2K、Wannier90、Packmol、NumPy、mpi4py 和可选的 PLUMED。 |
+| [applications](applications/src) | LAMMPS、Quantum ESPRESSO、CP2K、Wannier90、Packmol、材料 Python 工具、mpi4py 和可选的 PLUMED。 |
 | [delivery](delivery) | 组合前四层的 CPU/CUDA Dev Container 配置，以及验收和基准脚本。 |
 
 ## 编写 Feature
@@ -15,7 +15,8 @@
 ```sh
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh example
+wise_id=example
+. /opt/wise/lib/wise/feature.sh
 wise_require_capability mpi
 wise_require fftw
 wise_require_if "${ELPA:-false}" elpa
@@ -23,10 +24,10 @@ wise_require_if "${ELPA:-false}" elpa
 wise_done
 ```
 
-- 无条件依赖写入 `dependsOn`，条件依赖和能力提供者写入 `installsAfter`。依赖指向同层或下层，以 `harbor.will/willmat/wise/<层>/<id>:<主版本>` 引用。`npm test` 校验声明及两套交付的安装顺序。
+- 无条件依赖写入 `dependsOn`，条件依赖和能力提供者写入 `installsAfter`。依赖指向同层或下层，以 `harbor.will/wise/wise-compute-features/<层>/<id>:<主版本>` 引用。`npm test` 校验声明及两套交付的安装顺序。
 - 每套交付只选一个 MPI 提供者。默认 Open MPI 使用 UCX 和 libfabric，可选 MPICH 使用 libfabric。
 - CUDA、NVIDIA HPC SDK 和 GDRCopy 由 CUDA 基座提供。CPU 指令集基线是 x86-64-v3，每个进程只加载一套 OpenMP 运行时。
-- 修改 Feature 后递增其 `version`，升主版本时更新引用。发布和本地构建见 [命令协议](../docs/protocol-v1.md)。
+- 修改 Feature 后递增其 `version`，升主版本时更新引用。发布和本地构建见 [CLI 用法](../docs/cli.md)。
 
 ## 交付配置
 
@@ -37,6 +38,8 @@ wise_done
 | CP2K | ELPA、HDF5、`largeSystems` | 同 CPU 版，另启用 A100 GPU 构建 |
 
 应用的选项及默认值见各自的 `devcontainer-feature.json`。LAMMPS 始终启用 KSPACE，默认关闭 INTEL 和需联网下载代码的包。启用 `PLUMED`、`H5MD` 或 `NETCDF` 时需要对应 Feature。
+
+两套交付都安装与 `wise-platform` 材料 CPU 清单同版本的 NumPy、SciPy、pandas、Matplotlib、ASE、pymatgen、spglib、Phonopy、Phono3py、PySCF、pycalphad、MDAnalysis 和 h5py。传递依赖按 Ubuntu 24.04 的 CPython 3.12／linux/amd64 锁定 wheel 和 SHA-256，验收包含离线导入及 HDF5 读写。[Python 依赖锁](applications/src/materials-python/requirements.txt)
 
 两套交付默认设置 `--shm-size=16g`、`--cap-add=SYS_PTRACE` 和 `--ulimit memlock=-1:-1`。使用 InfiniBand/RoCE 时另加 `--device=/dev/infiniband --network=host`。GPUDirect RDMA 还需宿主机加载 `nvidia-peermem` 和 `gdrdrv`。OpenMP 默认将线程绑在相邻核心，每个 rank 默认 1 个线程。
 

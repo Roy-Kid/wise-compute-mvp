@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh ucx
+wise_id=ucx
+. /opt/wise/lib/wise/feature.sh
 
 wise_require rdma
 wise_workdir

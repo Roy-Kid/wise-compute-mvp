@@ -14,7 +14,7 @@ const featureTiers = ["infra", "toolchains", "applications"] as const;
 const variants = ["cpu", "cuda"];
 
 // Every Feature and delivery refers to Features by their published reference under this prefix.
-const prefix = "harbor.will/willmat/wise";
+const prefix = "harbor.will/wise/wise-compute-features";
 const features = readStack(stack).map(feature => {
   const meta = JSON.parse(readFileSync(join(feature.dir, "devcontainer-feature.json"), "utf8"));
   return {
@@ -111,7 +111,9 @@ test("each delivery installs one MPI, below everything that needs it, and no Fea
     const users = features.filter(f => requirements(f).capabilities.includes("mpi") && ids.includes(f.id));
     assert.ok(users.length >= 5, `${variant}: the MPI users are found`);
     for (const user of users) assert.ok(ids.indexOf(mpi[0]) < ids.indexOf(user.id), `${variant}: ${mpi[0]} before ${user.id}`);
-    for (const id of ["lammps", "quantum-espresso", "cp2k", "wannier90", "packmol", "numpy", "mpi4py"]) assert.ok(ids.includes(id), `${variant}: ${id}`);
+    for (const id of ["lammps", "quantum-espresso", "cp2k", "wannier90", "packmol", "materials-python", "numpy", "mpi4py"]) {
+      assert.ok(ids.includes(id), `${variant}: ${id}`);
+    }
   }
 });
 
@@ -195,12 +197,19 @@ const providersOf = (capability: string) =>
 test("every Feature uses the SDK: sources it under its own id and registers when done", () => {
   for (const feature of features) {
     if (feature.id === "core") continue;
-    assert.match(feature.install, new RegExp(`^#!/bin/sh\nset -eu\n\\. /opt/wise/lib/wise/feature\\.sh ${feature.id}\n`), feature.id);
+    assert.match(feature.install, new RegExp(`^#!/bin/sh\nset -eu\nwise_id=${feature.id}\n\\. /opt/wise/lib/wise/feature\\.sh\n`), feature.id);
     assert.match(feature.install, /\nwise_done\n$/, `${feature.id} ends with wise_done`);
     assert.ok(feature.dependsOn.includes(reference("core")), `${feature.id} depends on core`);
     // Features ask the registry; they never probe each other's files.
     assert.doesNotMatch(feature.install, /pkg-config --exists|mpichversion\)|-[ex] \/opt\/wise\/bin\/mpi|ls [^\n]*\.so[^\n]*>\/dev\/null/, `${feature.id} probes another Feature`);
   }
+});
+
+test("the Feature SDK can be sourced by sh without positional parameters", () => {
+  const sdk = join(byId("core").dir, "feature.sh");
+  const output = execFileSync("sh", ["-eu", "-c",
+    'sdk=$1; set --; wise_id=example; . "$sdk"; printf "%s\\n" "$wise_id"', "sh", sdk], { encoding: "utf8" });
+  assert.equal(output, "example\n");
 });
 
 test("declared requirements match dependsOn and installsAfter, with nothing stale", () => {

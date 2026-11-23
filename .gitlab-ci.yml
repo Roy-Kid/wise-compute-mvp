@@ -1,45 +1,41 @@
-# Runner: Docker executor with privileged mode (Docker-in-Docker), linux/amd64.
-# CI/CD variables: HARBOR_USER, HARBOR_PASSWORD (masked, protected) and HARBOR_CA (file variable, the Will
-# Root CA, so the Dev Container CLI trusts harbor.will).
-#
-# Merge requests and main build both deliveries from the stack sources (--local-features) and verify them.
-# A tag publishes the Features to FEATURE_NAMESPACE, builds the deliveries from those published references,
-# verifies them and pushes MATERIALS_REPOSITORY:<tag>-cpu and <tag>-cuda; existing tags are never overwritten.
-# Runners have no GPU: the CUDA image is verified without a device run; run
-# `stack/delivery/verify.sh cuda` on a GPU node before release.
-
 stages: [test, features, image]
 
 variables:
   HARBOR_REGISTRY: harbor.will
-  FEATURE_NAMESPACE: willmat/wise
-  MATERIALS_REPOSITORY: harbor.will/willmat/wise-compute-runtime
-  DOCKER_HOST: tcp://docker:2376
-  DOCKER_TLS_CERTDIR: /certs
-  DOCKER_TLS_VERIFY: "1"
-  DOCKER_CERT_PATH: /certs/client
+  FEATURE_NAMESPACE: wise/wise-compute-features
+  MATERIALS_REPOSITORY: harbor.will/wise/wise-compute-runtime
 
 workflow:
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_TAG
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: &main_push '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      auto_cancel:
+        on_new_commit: none
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
 
 default:
-  image: docker:28-cli
+  image: node:24-alpine
   before_script:
-    - apk add --no-cache nodejs-current npm python3
     - npm ci
-    - npm run build
 
-# Docker credentials and CA trust for harbor.will, read by docker and by the Dev Container CLI alike.
 .harbor:
   script:
-    - mkdir -p ~/.docker
-    - printf '{"auths":{"%s":{"auth":"%s"}}}' "$HARBOR_REGISTRY"
-      "$(printf '%s:%s' "$HARBOR_USER" "$HARBOR_PASSWORD" | base64 | tr -d '\n')" > ~/.docker/config.json
-    - export NODE_EXTRA_CA_CERTS="$HARBOR_CA"
+    - &configure_harbor |
+      : "${HARBOR_USER:?Set HARBOR_USER for the team Harbor project}"
+      : "${HARBOR_PASSWORD:?Set HARBOR_PASSWORD for the team Harbor project}"
+      : "${HARBOR_CA:?Set HARBOR_CA as a file variable}"
+      test -s "$HARBOR_CA"
+      export NODE_EXTRA_CA_CERTS="$HARBOR_CA"
+      DOCKER_CONFIG=$(mktemp -d)
+      export DOCKER_CONFIG
+      node --input-type=module <<'JS'
+      import { writeFileSync } from "node:fs";
+      import { join } from "node:path";
+      const { DOCKER_CONFIG, HARBOR_REGISTRY, HARBOR_USER, HARBOR_PASSWORD } = process.env;
+      const auth = Buffer.from(HARBOR_USER + ":" + HARBOR_PASSWORD).toString("base64");
+      writeFileSync(join(DOCKER_CONFIG, "config.json"),
+        JSON.stringify({ auths: { [HARBOR_REGISTRY]: { auth } } }), { mode: 0o600 });
+      JS
 
 test:
   stage: test
@@ -50,55 +46,68 @@ test:
 features:
   stage: features
   rules:
-    - if: $CI_COMMIT_TAG
+    - if: *main_push
+  resource_group: publish-features
   script:
-    - !reference [.harbor, script]
-    - node cli/dist/cli.js feature publish stack --registry "$HARBOR_REGISTRY" --namespace "$FEATURE_NAMESPACE" | tee features.json
+    - *configure_harbor
+    - node cli/dist/cli.js feature publish stack --registry "$HARBOR_REGISTRY" --namespace "$FEATURE_NAMESPACE" > features.json
   artifacts:
     expire_in: never
     paths: [features.json]
 
-materials:
+.materials:
   stage: image
-  services:
-    - docker:28-dind
+  image:
+    name: docker:28.5.2-dind
+    entrypoint: [""]
+  variables:
+    DOCKER_HOST: unix:///tmp/wise-docker.sock
   timeout: 5h
   parallel:
     matrix:
       - VARIANT: [cpu, cuda]
-  variables:
-    LOCAL_IMAGE: wise-compute:materials-$VARIANT
+  before_script:
+    - apk add --no-cache ca-certificates nodejs-current npm
+    - npm ci
+    - |
+      start_docker() {
+        dockerd --host "$DOCKER_HOST" > /tmp/wise-dockerd.log 2>&1 &
+        daemon_pid=$!
+        for _ in $(seq 1 30); do
+          if docker info >/dev/null 2>&1; then return 0; fi
+          if ! kill -0 "$daemon_pid" 2>/dev/null; then break; fi
+          sleep 2
+        done
+        cat /tmp/wise-dockerd.log >&2
+        return 1
+      }
+
+materials:verify:
+  extends: .materials
   rules:
-    - if: $CI_COMMIT_TAG
-    - changes: [stack/**/*, cli/**/*, package.json, package-lock.json, .gitlab-ci.yml]
-    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes: [stack/**/*, cli/**/*, package.json, package-lock.json, .gitlab-ci.yml]
+    - if: '$CI_PIPELINE_SOURCE == "web"'
   script:
-    - |
-      if [ -n "${CI_COMMIT_TAG:-}" ]; then
-        features=""
-        target="$MATERIALS_REPOSITORY:$CI_COMMIT_TAG-$VARIANT"
-      else
-        features="--local-features stack"
-      fi
-    # Tag pipelines need the credentials; elsewhere the protected variables are empty and nothing uses them.
-    - !reference [.harbor, script]
-    - |
-      if [ -n "${target:-}" ] && docker buildx imagetools inspect "$target" >/dev/null 2>&1; then
-        echo "$target already exists; release tags are immutable" >&2
-        exit 1
-      fi
-    - node cli/dist/cli.js image build --workspace-folder "stack/delivery/$VARIANT" --platform linux/amd64 $features --image "$LOCAL_IMAGE"
-    - docker image inspect "$LOCAL_IMAGE" --format '{{.Id}} {{.Size}}' | tee image.txt
-    # Unprivileged and offline.
-    - >-
-      docker run --rm -i --user 65534:65534 --network none --tmpfs /tmp:mode=1777 --shm-size=2g -e WISE_VERIFY_GPU=0
-      --entrypoint /bin/sh "$LOCAL_IMAGE" -s "$VARIANT" < stack/delivery/verify.sh
-    - |
-      if [ -n "${target:-}" ]; then
-        node cli/dist/cli.js image push "$LOCAL_IMAGE" "$target" | tee push.json
-        node stack/delivery/release-record.mjs "$VARIANT"
-      fi
+    - start_docker
+    - node stack/delivery/ci-image.mjs "$VARIANT"
+  artifacts:
+    when: always
+    paths: [image.txt]
+
+materials:publish:
+  extends: .materials
+  rules:
+    - if: *main_push
+  resource_group: materials-$CI_COMMIT_SHA-$VARIANT
+  script:
+    - *configure_harbor
+    - install -D -m 0644 "$HARBOR_CA" "/etc/docker/certs.d/$HARBOR_REGISTRY/ca.crt"
+    - install -D -m 0644 "$HARBOR_CA" /usr/local/share/ca-certificates/wise-harbor.crt
+    - update-ca-certificates
+    - start_docker
+    - node stack/delivery/ci-image.mjs "$VARIANT" --publish
   artifacts:
     when: always
     expire_in: never
-    paths: [image.txt, push.json, release.json]
+    paths: [image.txt, release.json]

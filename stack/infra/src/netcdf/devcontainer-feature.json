@@ -4,12 +4,12 @@
   "name": "Parallel NetCDF-C",
   "description": "Builds NetCDF-C 4.10.1 into /opt/wise on the parallel HDF5 of the hdf5 Feature (NetCDF-4 parallel I/O); no network access (DAP, byte-range, NCZarr off). Provider of LAMMPS NETCDF.",
   "dependsOn": {
-    "harbor.will/willmat/wise/infra/core:1": {},
-    "harbor.will/willmat/wise/infra/openmp:2": {},
-    "harbor.will/willmat/wise/infra/hdf5:1": {}
+    "harbor.will/wise/wise-compute-features/infra/core:1": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:2": {},
+    "harbor.will/wise/wise-compute-features/infra/hdf5:1": {}
   },
   "installsAfter": [
-    "harbor.will/willmat/wise/infra/openmpi:2",
-    "harbor.will/willmat/wise/infra/mpich:2"
+    "harbor.will/wise/wise-compute-features/infra/openmpi:2",
+    "harbor.will/wise/wise-compute-features/infra/mpich:2"
   ]
 }

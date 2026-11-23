@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh nodejs
+wise_id=nodejs
+. /opt/wise/lib/wise/feature.sh
 
 wise_apt ca-certificates curl xz-utils
 

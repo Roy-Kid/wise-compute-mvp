@@ -119,9 +119,20 @@ describe("push", () => {
     });
     const registry = new OciRegistry(docker);
     const expected = { tag: target, digest, reference: fixed };
-    assert.deepEqual(await registry.push("research:local", target), expected);
-    assert.deepEqual(await registry.push("research:local", target), expected);
+    assert.deepEqual(await registry.push("research:local", target, { immutable: true }), expected);
+    assert.deepEqual(await registry.push("research:local", target, { immutable: true }), expected);
     assert.equal(pushes, 1);
+  });
+
+  test("an immutable publish refuses to tag or push over a different registry image", async () => {
+    const { calls, docker } = fakeDocker(args => {
+      if (args[0] === "image" && args[1] === "inspect") return ok(local);
+      if (args.includes("--raw")) return ok({ config: { digest: leaf } });
+      return ok({ digest });
+    });
+    await assert.rejects(new OciRegistry(docker).push("research:local", target, { immutable: true }),
+      (error: unknown) => error instanceof RegistryError && error.kind === "conflict");
+    assert.deepEqual(calls.filter(args => args[0] === "image").map(args => args[1]), ["inspect"]);
   });
 
   test("refuses a target without a tag", async () => {

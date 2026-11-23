@@ -4,11 +4,11 @@
   "name": "FFTW",
   "description": "Builds FFTW 3.3.11 into /opt/wise in double and single precision, each with OpenMP, threads and MPI against the image's MPI, SIMD kernels up to AVX-512 and FMA chosen at run time: the FFT library of every CPU code path (LAMMPS KSPACE, Quantum ESPRESSO, CP2K).",
   "dependsOn": {
-    "harbor.will/willmat/wise/infra/core:1": {},
-    "harbor.will/willmat/wise/infra/openmp:2": {}
+    "harbor.will/wise/wise-compute-features/infra/core:1": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:2": {}
   },
   "installsAfter": [
-    "harbor.will/willmat/wise/infra/openmpi:2",
-    "harbor.will/willmat/wise/infra/mpich:2"
+    "harbor.will/wise/wise-compute-features/infra/openmpi:2",
+    "harbor.will/wise/wise-compute-features/infra/mpich:2"
   ]
 }

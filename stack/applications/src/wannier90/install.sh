@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh wannier90
+wise_id=wannier90
+. /opt/wise/lib/wise/feature.sh
 
 wise_require linear-algebra
 wise_workdir

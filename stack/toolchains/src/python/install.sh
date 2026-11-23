@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh python
+wise_id=python
+. /opt/wise/lib/wise/feature.sh
 
 # WISE_VENV comes from this Feature's containerEnv, which the build applies before install.sh runs.
 : "${WISE_VENV:?WISE_VENV must be set by the python Feature metadata}"

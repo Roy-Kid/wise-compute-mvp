@@ -1,4 +1,4 @@
-# WiseHub 命令协议 v1
+# WiseHub CLI
 
 结果以 JSON 写入 stdout，进度和错误写入 stderr。退出码 `0` 表示成功，`1` 表示执行失败，`2` 表示命令或参数用法错误。
 
@@ -38,6 +38,6 @@ wisehub feature publish STACK --registry HOST --namespace NAMESPACE
 
 ## 运行环境
 
-镜像操作需要 Docker Engine API 1.49+ 和 Buildx。Docker 与 Dev Container CLI 都读取 Docker 凭据，私有 CA 需分别配置到 Docker 和 `NODE_EXTRA_CA_CERTS`。镜像推送凭据也须有拉取权限，用于读回校验。
+镜像操作需要 Docker 和 Buildx。Docker 须支持 `docker image push --platform` 和 `docker image inspect --platform`。Docker 与 Dev Container CLI 都读取 Docker 凭据，私有 CA 需分别配置到 Docker 和 `NODE_EXTRA_CA_CERTS`。镜像推送凭据也须有拉取权限，用于读回校验。
 
 Registry 错误带 `wisehub [类别]` 前缀。类别为 `authentication`、`permission`、`missing`、`conflict`、`temporary`、`integrity` 或 `backend`。

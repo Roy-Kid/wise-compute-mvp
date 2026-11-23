@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh plumed
+wise_id=plumed
+. /opt/wise/lib/wise/feature.sh
 
 wise_require_capability mpi
 wise_require linear-algebra

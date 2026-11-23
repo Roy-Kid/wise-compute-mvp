@@ -6,7 +6,7 @@ import { describe, test } from "node:test";
 import { FeaturePublisher, parseFeatureReference, publishOrder, readStack, stageLocalFeatures, tagMatches } from "../src/features.ts";
 import type { Run } from "../src/process.ts";
 
-const prefix = "harbor.will/willmat/wise";
+const prefix = "harbor.will/wise/wise-compute-features";
 
 /** Writes a stack: { "collection/id": { version, dependsOn?, installsAfter? } }. */
 function stack(features: Record<string, { version?: string; dependsOn?: string[]; installsAfter?: string[] }>): string {
@@ -107,12 +107,12 @@ describe("FeaturePublisher", () => {
       const id = args.includes(join(root, "infra", "src")) ? "openmp" : "lammps";
       return { code: 0, stdout: `log line\n{"${id}":{"publishedTags":["1","1.0","1.0.0","latest"],"digest":"sha256:x"}}`, stderr: "" };
     };
-    const results = await new FeaturePublisher(execute).publish(root, "harbor.will", "willmat/wise");
+    const results = await new FeaturePublisher(execute).publish(root, "harbor.will", "wise/wise-compute-features");
     assert.deepEqual(results.map(result => [result.collection, result.namespace]),
-      [["infra", "willmat/wise/infra"], ["applications", "willmat/wise/applications"]]);
+      [["infra", "wise/wise-compute-features/infra"], ["applications", "wise/wise-compute-features/applications"]]);
     assert.deepEqual(calls.map(args => args.slice(1)), [
-      ["features", "publish", join(root, "infra", "src"), "--registry", "harbor.will", "--namespace", "willmat/wise/infra"],
-      ["features", "publish", join(root, "applications", "src"), "--registry", "harbor.will", "--namespace", "willmat/wise/applications"],
+      ["features", "publish", join(root, "infra", "src"), "--registry", "harbor.will", "--namespace", "wise/wise-compute-features/infra"],
+      ["features", "publish", join(root, "applications", "src"), "--registry", "harbor.will", "--namespace", "wise/wise-compute-features/applications"],
     ]);
     assert.deepEqual(results[1].features, { lammps: { publishedTags: ["1", "1.0", "1.0.0", "latest"], digest: "sha256:x" } });
   });

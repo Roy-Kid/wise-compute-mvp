@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh cp2k
+wise_id=cp2k
+. /opt/wise/lib/wise/feature.sh
 
 wise_require_capability mpi
 wise_require fftw

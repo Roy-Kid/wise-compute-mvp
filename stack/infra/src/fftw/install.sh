@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
-. /opt/wise/lib/wise/feature.sh fftw
+wise_id=fftw
+. /opt/wise/lib/wise/feature.sh
 
 wise_require_capability mpi
 wise_workdir
