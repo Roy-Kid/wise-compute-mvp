@@ -28,7 +28,14 @@ if [ -n "$cc" ]; then
 else
     set -- "$@" -DQE_ENABLE_OPENMP=ON
 fi
-[ "${ELPA:-false}" != true ] || set -- "$@" -DQE_ENABLE_ELPA=ON
+if [ "${ELPA:-false}" = true ]; then
+    elpa_version=$(pkg-config --modversion elpa_openmp)
+    elpa_include=$(pkg-config --variable=includedir elpa_openmp)/elpa_openmp-$elpa_version
+    elpa_libdir=$(pkg-config --variable=libdir elpa_openmp)
+    set -- "$@" -DQE_ENABLE_ELPA=ON -DELPA_VERSION="$elpa_version" \
+        -DELPA_INCLUDE_DIRS="$elpa_include" -DELPA_Fortran_MODS_DIR="$elpa_include/modules" \
+        -DELPA_LIBRARIES="$elpa_libdir/libelpa_openmp.so"
+fi
 [ "${HDF5:-false}" != true ] || set -- "$@" -DQE_ENABLE_HDF5=ON -DHDF5_ROOT="$WISE_PREFIX"
 # cmakeArgs is a space separated list by contract; no globbing while it is split.
 set -f
