@@ -1,6 +1,6 @@
 {
   "id": "openmpi",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "name": "Open MPI",
   "description": "Builds Open MPI 5.0.11 into /opt/wise with UCX, OFI and PMIx. Use this Feature when the base image does not already provide MPI. CPU is the default delivery; a CUDA build uses the NVIDIA Fortran compiler.",
   "containerEnv": {

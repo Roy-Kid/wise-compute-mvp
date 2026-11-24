@@ -28,7 +28,7 @@ ldconfig
 info=$("$WISE_PREFIX/bin/ompi_info" --parsable --all)
 expected=false
 if wise_cuda; then expected=true; fi
-echo "$info" | grep -q "^mpi_built_with_cuda_support:value:$expected$" || wise_fail "CUDA support is not $expected"
+echo "$info" | grep -Eq "(^|:)mpi_built_with_cuda_support:value:$expected$" || wise_fail "CUDA support is not $expected"
 for component in pml:ucx osc:ucx mtl:ofi btl:ofi; do
     echo "$info" | grep -q "^mca:${component%%:*}:${component#*:}:" || wise_fail "component $component was not built"
 done

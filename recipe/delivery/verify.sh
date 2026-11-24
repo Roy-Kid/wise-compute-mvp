@@ -150,7 +150,7 @@ grep -q 'KOKKOS FFT library *= *CUFFT' lammps-help.txt
 ldd /opt/wise/bin/pw.x | grep -q libcufft
 ! ldd /opt/wise/bin/pw.x | grep -q libgomp || fail "the GPU pw.x loads GCC's OpenMP runtime"
 ldd /opt/wise/bin/cp2k.psmp | grep -q libcudart
-echo "$ompi" | grep -q '^mpi_built_with_cuda_support:value:true$' || fail "Open MPI is not CUDA-aware"
+echo "$ompi" | grep -Eq '(^|:)mpi_built_with_cuda_support:value:true$' || fail "Open MPI is not CUDA-aware"
 [ "${WISE_VERIFY_GPU:-1}" = 1 ] || exit 0
 nvidia-smi -L
 driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1)
