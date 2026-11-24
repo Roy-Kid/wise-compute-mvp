@@ -1,6 +1,6 @@
 {
   "id": "mpi4py",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "name": "mpi4py",
   "description": "Builds the hash-pinned mpi4py 4.1.2 sdist against the image's MPI into the environment of the python Feature.",
   "dependsOn": {
