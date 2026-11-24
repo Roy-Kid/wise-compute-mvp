@@ -18,6 +18,8 @@ npx wisehub image build --workspace-folder recipe/delivery/cpu --local-features 
 
 ## CI/CD
 
+在 GitHub 的 Actions 页面手动运行 [Publish materials full CPU](.github/workflows/materials-full-cpu.yml)，即可构建 `linux/amd64` CPU 完整镜像，离线验收后推送到 Docker Hub。先创建私有目标仓库，在 GitHub Actions 仓库变量中设置 `DOCKERHUB_REPOSITORY`（`namespace/repository`）和 `DOCKERHUB_USERNAME`，并将可读写该仓库的 PAT 保存为 Actions secret `DOCKERHUB_TOKEN`。工作流在推送前校验仓库可见性，使用 [CPU 发布配方](recipe/delivery/cpu/lavas-release.json) 中的版本标签，成功后在运行摘要中给出可直接拉取的 digest 引用。默认使用 `ubuntu-24.04`；如需更多磁盘或内存，可用仓库变量 `CPU_BUILD_RUNNER` 指定已配置的 x64 Linux runner 标签。
+
 [GitLab CI](.gitlab-ci.yml) 在 MR 和主分支运行测试及打包检查。镜像相关 MR 会构建并离线验收 CPU/CUDA 镜像，需要支持 privileged Docker-in-Docker 的 linux/amd64 runner。
 
 每次合并到默认分支 `main` 后，CI 自动将 Feature 发布到 `harbor.will/wise/wise-compute-features`，并用该提交的 Feature 源码构建两套镜像。各自通过离线验收后推送到 `harbor.will/wise/wise-compute-runtime:materials-<cpu|cuda>-<完整提交 SHA>`。`release.json` 记录源码提交、镜像摘要和验收状态。重试会拉取并验收同一提交的已有镜像，CUDA 设备验收在 GPU 节点执行。

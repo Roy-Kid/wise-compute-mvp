@@ -5,7 +5,7 @@
   "version": "0.1.0-dev.1",
   "image": "harbor.will/wise/wise-compute-image:materials-full-cpu-0.1.0-dev.1",
   "base": {
-    "tag": "harbor.will/docker.io/library/ubuntu:24.04",
+    "tag": "docker.io/library/ubuntu:24.04",
     "digest": "sha256:67efaecc0031a612cf7bb3c863407018dbbef0a971f62032b77aa542ac8ac0d2"
   },
   "applications": {
