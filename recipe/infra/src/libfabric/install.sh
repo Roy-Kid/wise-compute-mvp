@@ -16,6 +16,7 @@ fi
 ./configure "$@"
 make -j"$(nproc)"
 make install-strip
+ldconfig
 providers=$("$WISE_PREFIX/bin/fi_info" -l)
 for provider in verbs efa shm tcp; do
     echo "$providers" | grep -q "^$provider:" || wise_fail "provider $provider was not built"
