@@ -14,7 +14,7 @@ wise_fetch_tar https://elpa.mpcdf.mpg.de/software/tarball-archive/Releases/2026.
 set -- --prefix="$WISE_PREFIX" --disable-static --enable-openmp \
     --disable-avx512-kernels --disable-sse-assembly-kernels \
     SCALAPACK_LDFLAGS="-L$WISE_PREFIX/lib -lscalapack -lopenblas" SCALAPACK_FCFLAGS="-I$WISE_PREFIX/include" \
-    FC="$WISE_MPI_ROOT/bin/mpifort" CC="$WISE_MPI_ROOT/bin/mpicc"
+    FC="$WISE_MPI_ROOT/bin/mpifort" CC="$WISE_MPI_ROOT/bin/mpicc" CXX="$WISE_MPI_ROOT/bin/mpicxx"
 if wise_cuda; then
     wise_nvfortran_env
     set -- "$@" --disable-avx2-kernels --disable-avx-kernels --disable-sse-kernels \
