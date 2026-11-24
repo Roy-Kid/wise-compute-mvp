@@ -1,6 +1,6 @@
 {
   "id": "scalapack",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "name": "ScaLAPACK",
   "description": "Builds ScaLAPACK 2.2.3 into /opt/wise against the image's MPI and OpenBLAS, with GNU Fortran on CPU and nvfortran on CUDA.",
   "dependsOn": {

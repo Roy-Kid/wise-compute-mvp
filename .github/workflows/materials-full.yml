@@ -1,6 +1,13 @@
 name: Publish materials full CPU and CUDA
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: Images to build
+        type: choice
+        default: both
+        options: [both, cpu, cuda]
 
 permissions:
   contents: read
@@ -11,12 +18,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - variant: cpu
-            runner: ${{ vars.CPU_BUILD_RUNNER || 'ubuntu-24.04' }}
-          - variant: cuda
-            runner: ${{ vars.CUDA_BUILD_RUNNER || 'ubuntu-24.04' }}
-    runs-on: ${{ matrix.runner }}
+        variant: ${{ fromJSON(inputs.variant == 'cpu' && '["cpu"]' || inputs.variant == 'cuda' && '["cuda"]' || '["cpu","cuda"]') }}
+    runs-on: ${{ vars[format('{0}_BUILD_RUNNER', matrix.variant)] || 'ubuntu-24.04' }}
     timeout-minutes: 360
     defaults:
       run:
@@ -47,7 +50,7 @@ jobs:
           package-manager-cache: false
 
       - name: Reclaim build space on the standard hosted runner
-        if: runner.environment == 'github-hosted' && matrix.runner == 'ubuntu-24.04'
+        if: runner.environment == 'github-hosted' && (vars[format('{0}_BUILD_RUNNER', matrix.variant)] || 'ubuntu-24.04') == 'ubuntu-24.04'
         run: |
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
           df -h /var/lib/docker
