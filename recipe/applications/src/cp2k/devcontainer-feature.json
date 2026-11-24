@@ -1,6 +1,6 @@
 {
   "id": "cp2k",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "name": "CP2K",
   "description": "Builds CP2K 2026.2 with the selected MPI, FFTW, ScaLAPACK, OpenBLAS and its checksum-verified toolchain. The CUDA base uses NVHPC to match the SDK MPI Fortran modules. ELPA, HDF5 and large-system libraries are optional.",
   "options": {

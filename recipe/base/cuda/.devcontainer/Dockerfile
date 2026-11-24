@@ -4,13 +4,15 @@ ARG BASE_IMAGE=nvcr.io/nvidia/nvhpc@sha256:777412a2977d4feeb054d1076d6cfb74dd4af
 FROM ${BASE_IMAGE}
 
 ENV NVHPC_ROOT=/opt/nvidia/hpc_sdk/Linux_x86_64/25.7
-ENV CUDA_HOME=${NVHPC_ROOT}/cuda
+# The versioned directory: cuda/bin is a link into it, so CMake would resolve nvcc's "bin/.." to a cuda/
+# without targets/.
+ENV CUDA_HOME=${NVHPC_ROOT}/cuda/12.9
 ENV GDRCOPY_HOME=/usr/local/gdrcopy
 ENV HPCX_HOME=${NVHPC_ROOT}/comm_libs/12.9/hpcx/latest
 ENV WISE_BASE_MPI=openmpi
 ENV WISE_MPI_ROOT=${HPCX_HOME}/ompi
 ENV OPAL_PREFIX=${WISE_MPI_ROOT}
-ENV PATH=${WISE_MPI_ROOT}/bin:${HPCX_HOME}/ucx/bin:${PATH}
+ENV PATH=${WISE_MPI_ROOT}/bin:${HPCX_HOME}/ucx/bin:${CUDA_HOME}/bin:${PATH}
 ENV OMPI_CC=gcc OMPI_CXX=g++ OMPI_FC=nvfortran
 
 ARG APT_SNAPSHOT=20261101T000000Z
@@ -41,7 +43,8 @@ RUN set -eu; \
     echo "$GDRCOPY_HOME/lib" > /etc/ld.so.conf.d/gdrcopy.conf; \
     ldconfig; \
     for tool in nvc nvc++ nvfortran nvcc; do command -v "$tool"; done; \
-    for path in "$CUDA_HOME/include/cuda_runtime.h" "$CUDA_HOME/lib64/libcudart.so" \
+    test "$(command -v nvcc)" = "$CUDA_HOME/bin/nvcc"; \
+    for path in "$CUDA_HOME/targets/x86_64-linux/include" "$CUDA_HOME/include/cuda_runtime.h" "$CUDA_HOME/lib64/libcudart.so" \
         "$CUDA_HOME/lib64/stubs/libcuda.so" "$NVHPC_ROOT/math_libs/include/cufft.h" \
         "$NVHPC_ROOT/math_libs/lib64/libcufft.so" "$NVHPC_ROOT/math_libs/lib64/libcublas.so" \
         "$NVHPC_ROOT/math_libs/lib64/libcusolver.so" "$GDRCOPY_HOME/include/gdrapi.h"; do test -e "$path"; done; \

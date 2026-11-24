@@ -5,6 +5,8 @@
 # For cuda, run on a GPU node with --gpus 1 to exercise the GPU paths; WISE_VERIFY_GPU=0 skips them.
 set -eu
 
+# The script arrives on stdin, which mpirun would read; the braces make sh parse all of it first.
+{
 variant=${1:?usage: verify.sh cpu|cuda}
 case "$variant" in cpu|cuda) ;; *) echo "unknown variant: $variant" >&2; exit 2 ;; esac
 : "${WISE_VENV:?WISE_VENV is missing; the python Feature is not installed}"
@@ -35,7 +37,13 @@ shm=$(df -Pk /dev/shm | awk 'NR == 2 { print $2 }')
 [ "$shm" -ge 1048576 ] || fail "/dev/shm is $((shm / 1024)) MiB; run with --shm-size=16g (or --ipc=host)"
 # Ranks are bound to cores, threads stay next to their rank.
 [ "$OMP_PLACES" = cores ] && [ "$OMP_PROC_BIND" = close ]
-mpirun -n 2 --report-bindings true 2>&1 | grep -q 'bound to' || fail "mpirun does not bind ranks"
+cores=$(lscpu -p=CORE,SOCKET | grep -v '^#' | sort -u | wc -l)
+if [ "$cores" -ge 2 ]; then ranks=2; else ranks=1; fi
+mpirun -n "$ranks" --report-bindings true 2>&1 | grep -q 'bound to' || fail "mpirun does not bind ranks"
+# The two-rank checks below also run on a single core (CI runners with one hyper-threaded core).
+if [ "$cores" -lt 2 ]; then
+    export OMPI_MCA_rmaps_base_oversubscribe=1 PRTE_MCA_rmaps_default_mapping_policy=:oversubscribe
+fi
 # Parallel I/O and solvers.
 [ "$(nc-config --has-parallel4)" = yes ] || fail "NetCDF-4 parallel I/O is off"
 grep -q 'define H5_HAVE_PARALLEL 1' /opt/wise/include/H5pubconf.h || fail "HDF5 is not parallel"
@@ -45,7 +53,7 @@ done
 for lib in /opt/wise/lib/libelpa /opt/wise/lib/libhdf5 /opt/wise/lib/libscalapack; do
     ldd /opt/wise/bin/pw.x | grep -q "$lib" || fail "pw.x does not link $lib"
 done
-for lib in libelpa_openmp libhdf5 libcosma libsirius; do
+for lib in libelpa_openmp libhdf5; do
     ldd /opt/wise/bin/cp2k.psmp | grep -q "$lib" || fail "cp2k.psmp does not link $lib"
 done
 # One OpenMP runtime per process.
@@ -67,7 +75,12 @@ if level not in (MPI.THREAD_SERIALIZED, MPI.THREAD_MULTIPLE):
     raise RuntimeError(f"ELPA with OpenMP requires at least MPI_THREAD_SERIALIZED, got {level}")
 assert MPI.COMM_WORLD.allreduce(1) == 2
 '
-cp2k.psmp --version
+# COSMA, SIRIUS and LIBXSMM are static, so ask CP2K itself.
+cp2k_version=$(cp2k.psmp --version)
+echo "$cp2k_version"
+for feature in cosma sirius libxsmm spglib; do
+    echo "$cp2k_version" | grep -qw "$feature" || fail "CP2K lacks $feature"
+done
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -164,3 +177,4 @@ driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1)
 # Run on the device: KOKKOS must initialize the GPU and finish both runs, PPPM with cuFFT.
 lmp -k on g 1 -sf kk -var ranks 1 -in in.lj -log none -screen none
 lmp -k on g 1 -sf kk -in in.pppm -log none -screen none
+} </dev/null

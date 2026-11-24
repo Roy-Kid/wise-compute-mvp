@@ -93,6 +93,23 @@ describe("build", () => {
     assert.deepEqual(calls.slice(-2), [["image", "tag", id, "research:local"], ["image", "rm", staging]]);
   });
 
+  test("selects a platform variant only when the default one differs, so older Docker can inspect", async () => {
+    const inspects: (readonly string[])[] = [];
+    const inspecting = (first: typeof local) => new Docker(async (_program, args) => {
+      inspects.push(args);
+      return ok(args.includes("--platform") ? local : first);
+    });
+    await inspecting(local).inspectImage("research:local", "linux/amd64");
+    assert.equal(inspects.length, 1);
+    assert.ok(!inspects[0].includes("--platform"));
+
+    inspects.length = 0;
+    const other = { ...local, Architecture: "arm64" };
+    const image = await inspecting(other).inspectImage("research:local", "linux/amd64");
+    assert.equal(image.platform, "linux/amd64");
+    assert.deepEqual(inspects[1].slice(4, 6), ["--platform", "linux/amd64"]);
+  });
+
   test("rejects flags that would bypass the structured output", async () => {
     const builder = new DevContainerBuilder(new Docker(async () => ok()), async () => ok());
     await assert.rejects(

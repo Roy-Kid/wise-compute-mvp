@@ -67,17 +67,24 @@ export class Docker {
   }
 
   async inspectImage(reference: string, platform?: string): Promise<LocalImage> {
+    const image = await this.inspectVariant(reference);
+    if (!platform || platformMatches(platform, image.platform)) return image;
+    // `inspect --platform` needs Docker 28.1, so ask for a variant only when the default one differs.
+    const selected = await this.inspectVariant(reference, platform).catch(() => image);
+    if (!platformMatches(platform, selected.platform)) {
+      throw new Error(`Expected ${reference} to be ${platform}, got ${selected.platform}`);
+    }
+    return selected;
+  }
+
+  private async inspectVariant(reference: string, platform?: string): Promise<LocalImage> {
     const args = ["image", "inspect", "--format", "{{json .}}"];
     if (platform) args.push("--platform", platform);
     const image = JSON.parse(await this.exec([...args, "--", reference]));
     if (!digestPattern.test(image.Id) || !image.Os || !image.Architecture) {
       throw new Error(`Docker returned incomplete metadata for ${reference}`);
     }
-    const actual = [image.Os, image.Architecture, image.Variant].filter(Boolean).join("/");
-    if (platform && !platformMatches(platform, actual)) {
-      throw new Error(`Expected ${reference} to be ${platform}, got ${actual}`);
-    }
-    return { reference, id: image.Id, platform: actual };
+    return { reference, id: image.Id, platform: [image.Os, image.Architecture, image.Variant].filter(Boolean).join("/") };
   }
 
   async tag(source: string, target: string): Promise<void> {

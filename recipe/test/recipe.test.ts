@@ -316,4 +316,6 @@ test("default deliveries use required Features and leave server-provider Feature
 
 test("verify.sh and benchmark.sh are valid sh", () => {
   for (const script of ["verify.sh", "benchmark.sh"]) execFileSync("sh", ["-n", join(recipe, "delivery", script)]);
+  // verify.sh is piped into sh; a command that reads stdin must not consume the rest of it.
+  assert.match(readFileSync(join(recipe, "delivery", "verify.sh"), "utf8"), /^\{\n[^]*\n\} <\/dev\/null\n$/m);
 });
