@@ -43,28 +43,44 @@ wise_done() { # register this Feature as installed
 }
 
 # --- Sources: pinned, verified, no history ----------------------------------------------------------
+# One dropped connection must not cost hours of compilation.
+export PIP_RETRIES=10 PIP_DEFAULT_TIMEOUT=60
+wise_retry() { # command...: up to five attempts with a growing pause
+    attempt=1
+    until "$@"; do
+        [ "$attempt" -lt 5 ] || wise_fail "failed after $attempt attempts: $*"
+        echo "$wise_id: attempt $attempt failed, retrying: $*" >&2
+        sleep "$((attempt * ${WISE_RETRY_PAUSE:-15}))"
+        attempt=$((attempt + 1))
+    done
+}
+wise_download() { # url sha256 file
+    wise_retry curl --fail --location --silent --show-error --connect-timeout 30 --speed-limit 1024 --speed-time 60 \
+        --proto '=https' "$1" -o "$3"
+    echo "$2  $3" | sha256sum --check --quiet || wise_fail "checksum mismatch for $1"
+}
 wise_workdir() { # sets WISE_WORK, removed on exit
     WISE_WORK=$(mktemp -d)
     trap 'rm -rf "$WISE_WORK"' EXIT
 }
 wise_fetch_tar() { # url sha256 dir: download, verify and unpack one release archive into dir
     mkdir -p "$3"
-    curl --fail --location --silent --show-error --retry 3 --proto '=https' "$1" -o "$3.archive"
-    echo "$2  $3.archive" | sha256sum --check --quiet || wise_fail "checksum mismatch for $1"
+    wise_download "$1" "$2" "$3.archive"
     tar -xf "$3.archive" -C "$3" --strip-components=1
     rm -f "$3.archive"
 }
 wise_fetch_git() { # url commit dir [submodule...|--all]: exactly one commit, depth 1, no tags
     url=$1 commit=$2 dir=$3; shift 3
     git init --quiet "$dir"
-    git -C "$dir" fetch --quiet --depth 1 --no-tags "$url" "$commit"
+    wise_retry git -C "$dir" fetch --quiet --depth 1 --no-tags "$url" "$commit"
     git -C "$dir" checkout --quiet FETCH_HEAD
-    if [ "${1:-}" = --all ]; then git -C "$dir" submodule update --quiet --init --depth 1
-    elif [ $# -gt 0 ]; then git -C "$dir" submodule update --quiet --init --depth 1 -- "$@"; fi
+    if [ "${1:-}" = --all ]; then wise_retry git -C "$dir" submodule update --quiet --init --depth 1
+    elif [ $# -gt 0 ]; then wise_retry git -C "$dir" submodule update --quiet --init --depth 1 -- "$@"; fi
 }
 wise_apt() { # package...: install from the base image's Ubuntu snapshot
-    DEBIAN_FRONTEND=noninteractive apt-get update
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$@"
+    # A failed index download is only a warning unless asked otherwise.
+    wise_retry env DEBIAN_FRONTEND=noninteractive apt-get -o APT::Update::Error-Mode=any update
+    wise_retry env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$@"
     rm -rf /var/lib/apt/lists/*
 }
 

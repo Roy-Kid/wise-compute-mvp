@@ -7,6 +7,7 @@ import { delimiter, join } from "node:path";
 import { test } from "node:test";
 import { devcontainerCli } from "../../cli/src/devcontainer.ts";
 import { parseFeatureReference, publishOrder, readStack, stageLocalFeatures } from "../../cli/src/features.ts";
+import { laterStages, prepareStage, stageCount, stageFeatures, stageTags } from "../delivery/stages.ts";
 
 const recipe = join(import.meta.dirname, "..");
 const featureTiers = ["infra", "toolchains", "applications", "providers"] as const;
@@ -43,9 +44,8 @@ writeFileSync(join(stub, "docker"), "#!/bin/sh\nexit 0\n");
 chmodSync(join(stub, "docker"), 0o755);
 type Resolved = { id: string; options: Record<string, unknown> };
 // Resolved offline from local Feature sources, the same way `wisehub image build --local-features` builds.
-function installOrder(variant: string): Resolved[] {
-  const workspace = join(recipe, "delivery", variant);
-  const { config, cleanup } = stageLocalFeatures(join(workspace, ".devcontainer", "devcontainer.json"), recipe);
+function installOrder(workspace: string, source = join(workspace, ".devcontainer", "devcontainer.json"), stack = recipe): Resolved[] {
+  const { config, cleanup } = stageLocalFeatures(source, stack);
   try {
     const output = execFileSync(process.execPath, [devcontainerCli().script, "read-configuration", "--workspace-folder", workspace,
       "--config", config, "--include-features-configuration"],
@@ -56,7 +56,7 @@ function installOrder(variant: string): Resolved[] {
     cleanup();
   }
 }
-const resolved = Object.fromEntries(variants.map(variant => [variant, installOrder(variant)]));
+const resolved = Object.fromEntries(variants.map(variant => [variant, installOrder(join(recipe, "delivery", variant))]));
 
 test("recipe/ contains all tiers", () => {
   for (const tier of tiers) assert.ok(existsSync(join(recipe, tier)), tier);
@@ -284,6 +284,43 @@ test("each delivery meets every declared requirement, in install order", () => {
   assert.ok(unmet([{ id: "mpich", options: {} }, { id: "openmpi", options: {} }, { id: "fftw", options: {} }])
     .includes("fftw needs exactly one mpi provider before it"));
   assert.ok(unmet([{ id: "hdf5", options: {} }, { id: "netcdf", options: {} }]).includes("hdf5 needs exactly one mpi provider before it"));
+});
+
+test("the CI stages install the delivery exactly once, with every requirement met in order", () => {
+  for (const variant of variants) {
+    const order = Array.from({ length: stageCount }, (_, index) => {
+      const stage = prepareStage(variant, index + 1, "wise-compute:previous");
+      try {
+        return installOrder(stage.workspace, stage.config, stage.stack);
+      } finally {
+        stage.cleanup();
+      }
+    });
+    assert.deepEqual(order.slice(1).map(items => items.map(item => item.id)), laterStages, variant);
+    assert.deepEqual(unmet(order.flat(), baseMpi[variant]), [], variant);
+    const sorted = (items: Resolved[]) => items.map(item => JSON.stringify(item)).sort();
+    assert.deepEqual(sorted(order.flat()), sorted(resolved[variant]), variant);
+    const tags = stageTags(variant);
+    assert.equal(new Set(tags).size, stageFeatures(variant).length);
+    assert.deepEqual(tags, stageTags(variant), "tags depend on content only");
+    for (const tag of tags) assert.match(tag, /^build-(cpu|cuda)-\d-[0-9a-f]{16}$/);
+  }
+});
+
+test("the Feature SDK retries a failing command and then gives up", () => {
+  const sdk = join(byId("core").dir, "feature.sh");
+  const work = mkdtempSync(join(tmpdir(), "wise-retry-"));
+  const output = execFileSync("sh", ["-eu", "-c", `
+    cd "$2"
+    wise_id=example WISE_RETRY_PAUSE=0
+    . "$1"
+    flaky() { echo x >> calls; test "$(wc -l < calls)" -ge 3; }
+    wise_retry flaky
+    wc -l < calls
+    if (wise_retry false); then exit 1; fi
+    echo gave up
+  `, "sh", sdk, work], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  assert.match(output, /^\s*3\ngave up\n$/);
 });
 
 test("one interconnect stack: Open MPI on UCX and libfabric, MPICH on libfabric, all on rdma-core", () => {

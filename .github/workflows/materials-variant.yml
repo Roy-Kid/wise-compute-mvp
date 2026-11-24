@@ -1,0 +1,58 @@
+name: Build one materials image
+
+# A chain of jobs, each within the time limit of a hosted runner (see recipe/delivery/stages.ts).
+on:
+  workflow_call:
+    inputs:
+      variant:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  stage1:
+    name: base, libraries and Python
+    uses: ./.github/workflows/materials-stage.yml
+    with:
+      variant: ${{ inputs.variant }}
+      goal: '1'
+    secrets: inherit
+
+  stage2:
+    name: LAMMPS
+    needs: stage1
+    uses: ./.github/workflows/materials-stage.yml
+    with:
+      variant: ${{ inputs.variant }}
+      goal: '2'
+    secrets: inherit
+
+  stage3:
+    name: Quantum ESPRESSO
+    needs: stage2
+    uses: ./.github/workflows/materials-stage.yml
+    with:
+      variant: ${{ inputs.variant }}
+      goal: '3'
+    secrets: inherit
+
+  stage4:
+    name: CP2K
+    needs: stage3
+    uses: ./.github/workflows/materials-stage.yml
+    with:
+      variant: ${{ inputs.variant }}
+      goal: '4'
+    secrets: inherit
+
+  release:
+    name: verify and publish
+    needs: stage4
+    uses: ./.github/workflows/materials-stage.yml
+    with:
+      variant: ${{ inputs.variant }}
+      goal: 'release'
+    secrets: inherit

@@ -14,12 +14,16 @@ ENV WISE_MPI_ROOT=${HPCX_HOME}/ompi
 ENV OPAL_PREFIX=${WISE_MPI_ROOT}
 ENV PATH=${WISE_MPI_ROOT}/bin:${HPCX_HOME}/ucx/bin:${CUDA_HOME}/bin:${PATH}
 ENV OMPI_CC=gcc OMPI_CXX=g++ OMPI_FC=nvfortran
+# The base image ends these lists with ":", which adds the current directory.
+ENV LD_LIBRARY_PATH=${NVHPC_ROOT}/comm_libs/nvshmem/lib:${NVHPC_ROOT}/comm_libs/nccl/lib:${NVHPC_ROOT}/math_libs/lib64:${NVHPC_ROOT}/compilers/lib:${CUDA_HOME}/lib64
+ENV CPATH=${NVHPC_ROOT}/comm_libs/nvshmem/include:${NVHPC_ROOT}/comm_libs/nccl/include:${NVHPC_ROOT}/compilers/extras/qd/include/qd:${NVHPC_ROOT}/math_libs/include:${GDRCOPY_HOME}/include
+ENV LIBRARY_PATH=${GDRCOPY_HOME}/lib
 
 ARG APT_SNAPSHOT=20261101T000000Z
 RUN set -eu; \
     . /etc/os-release; test "$VERSION_ID" = 24.04; \
     rm -f /etc/apt/sources.list.d/*cuda* /etc/apt/sources.list.d/*nvidia*; \
-    printf 'APT::Snapshot "%s";\n' "$APT_SNAPSHOT" > /etc/apt/apt.conf.d/50wise-snapshot
+    printf 'APT::Snapshot "%s";\nAcquire::Retries "5";\n' "$APT_SNAPSHOT" > /etc/apt/apt.conf.d/50wise-snapshot
 
 # Use the CUDA 12.9 HPC-X libraries for both builds and runs, including builders without a GPU.
 RUN bash -ec '. "$HPCX_HOME/hpcx-init.sh"; hpcx_load; \
@@ -35,8 +39,11 @@ RUN set -eu; \
     rm -rf /var/lib/apt/lists/*; \
     src=$(mktemp -d); \
     git init --quiet "$src"; \
-    git -C "$src" fetch --quiet --depth 1 --no-tags https://github.com/NVIDIA/gdrcopy.git \
-        7344efbd4e0a2ba9da2183b4cc0f10a092b3ca67; \
+    for pause in 15 30 45 60 0; do \
+        if git -C "$src" fetch --quiet --depth 1 --no-tags https://github.com/NVIDIA/gdrcopy.git \
+            7344efbd4e0a2ba9da2183b4cc0f10a092b3ca67; then break; fi; \
+        test "$pause" != 0; sleep "$pause"; \
+    done; \
     git -C "$src" checkout --quiet FETCH_HEAD; \
     make -C "$src" prefix="$GDRCOPY_HOME" CUDA="$CUDA_HOME" CC=gcc lib lib_install; \
     rm -rf "$src"; \

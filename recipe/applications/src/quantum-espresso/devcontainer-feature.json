@@ -1,6 +1,6 @@
 {
   "id": "quantum-espresso",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "name": "Quantum ESPRESSO",
   "description": "Builds Quantum ESPRESSO 7.6 with MPI, FFTW, ScaLAPACK and OpenBLAS. With cudaCC it uses nvfortran, OpenACC, cuFFT and CUDA-aware MPI, with one rank per GPU.",
   "options": {

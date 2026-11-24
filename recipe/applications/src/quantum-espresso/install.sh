@@ -36,13 +36,18 @@ if [ "${ELPA:-false}" = true ]; then
         -DELPA_INCLUDE_DIRS="$elpa_include" -DELPA_Fortran_MODS_DIR="$elpa_include/modules" \
         -DELPA_LIBRARIES="$elpa_libdir/libelpa_openmp.so"
 fi
-[ "${HDF5:-false}" != true ] || set -- "$@" -DQE_ENABLE_HDF5=ON -DHDF5_ROOT="$WISE_PREFIX"
+# HDF5 2 exports HDF5_PROVIDES_PARALLEL; CMake before 4 reads HDF5_ENABLE_PARALLEL and would pick serial I/O.
+[ "${HDF5:-false}" != true ] || set -- "$@" -DQE_ENABLE_HDF5=ON -DHDF5_ROOT="$WISE_PREFIX" -DHDF5_ENABLE_PARALLEL=ON
 # cmakeArgs is a space separated list by contract; no globbing while it is split.
 set -f
 # shellcheck disable=SC2086
 set -- "$@" ${CMAKEARGS:-}
 set +f
 cmake -S "$WISE_WORK/src" -B "$WISE_WORK/build" "$@"
+if [ "${HDF5:-false}" = true ]; then
+    grep -rqw -- '-D__HDF5' --include=flags.make "$WISE_WORK/build" || wise_fail "HDF5 is off"
+    ! grep -rqw -- '-D__HDF5_SERIAL' --include=flags.make "$WISE_WORK/build" || wise_fail "HDF5 I/O is serial"
+fi
 cmake --build "$WISE_WORK/build" -j"$(nproc)"
 cmake --install "$WISE_WORK/build" --strip
 for exe in pw.x ph.x pw2wannier90.x; do

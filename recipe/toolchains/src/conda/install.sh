@@ -13,9 +13,7 @@ version=25.3.1-0
 archive="Miniforge3-$version-Linux-$arch.sh"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-curl --fail --location --silent --show-error --retry 3 --proto '=https' \
-    "https://github.com/conda-forge/miniforge/releases/download/$version/$archive" -o "$work/$archive"
-printf '%s  %s\n' "$checksum" "$work/$archive" | sha256sum --check
+wise_download "https://github.com/conda-forge/miniforge/releases/download/$version/$archive" "$checksum" "$work/$archive"
 bash "$work/$archive" -b -p /opt/conda
 /opt/conda/bin/conda clean --all --yes
 ln -s /opt/conda/bin/conda /usr/local/bin/conda

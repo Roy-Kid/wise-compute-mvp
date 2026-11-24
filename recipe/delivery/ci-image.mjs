@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { DevContainerBuilder } from "../../cli/dist/build.js";
 import { Docker, RegistryError } from "../../cli/dist/docker.js";
 import { OciRegistry } from "../../cli/dist/registry.js";
+import { verifyImage } from "./verify-image.ts";
 
 const [variant, mode, ...extra] = process.argv.slice(2);
 if (!["cpu", "cuda"].includes(variant) || (mode !== undefined && mode !== "--publish") || extra.length) {
@@ -50,12 +51,7 @@ if (target && (labels?.["org.opencontainers.image.revision"] !== commit || label
 }
 writeFileSync("image.txt", `${info.Id} ${info.Size}\n`);
 
-execFileSync(docker.binary, ["run", "--rm", "-i", "--user", "65534:65534", "--network", "none",
-  "--tmpfs", "/tmp:mode=1777", "--shm-size=2g", "-e", "WISE_VERIFY_GPU=0", "--entrypoint", "/bin/sh",
-  image, "-s", variant], {
-  input: readFileSync(new URL("verify.sh", import.meta.url)),
-  stdio: ["pipe", "inherit", "inherit"],
-});
+verifyImage(docker.binary, image, variant);
 
 if (target) {
   const pushed = await registry.push(image, target, { immutable: true });

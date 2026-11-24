@@ -14,8 +14,6 @@ version=24.22.3
 archive="node-v$version-linux-$arch.tar.xz"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-curl --fail --location --silent --show-error --retry 3 --proto '=https' \
-    "https://nodejs.org/dist/v$version/$archive" -o "$work/$archive"
-printf '%s  %s\n' "$checksum" "$work/$archive" | sha256sum --check
+wise_download "https://nodejs.org/dist/v$version/$archive" "$checksum" "$work/$archive"
 tar -xJf "$work/$archive" --strip-components=1 -C /usr/local
 wise_done

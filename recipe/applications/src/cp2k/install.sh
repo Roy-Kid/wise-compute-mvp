@@ -47,6 +47,20 @@ if wise_cuda; then
     sed -i 's/ -g1"/ -g"/g' "$deps/scripts/stage3/install_libint.sh"
     sed -i 's/ -fpermissive"/"/' "$deps/scripts/stage7/install_libvdwxc.sh"
 fi
+if [ -n "$gpu" ]; then
+    # The toolchain builds SpFFT, SPLA and SIRIUS twice and lets CP2K find the CPU builds. Build each once, with
+    # CUDA; these builds run on the host too.
+    stage8=$deps/scripts/stage8
+    cuda='-DCMAKE_CUDA_ARCHITECTURES=${ARCH_NUM} -DCMAKE_CUDA_FLAGS=-allow-unsupported-compiler'
+    sed -i "s/-DSPFFT_STATIC=ON/& -DSPFFT_GPU_BACKEND=CUDA $cuda/" "$stage8/install_spfft.sh"
+    sed -i 's/-DSPLA_STATIC=ON/& -DSPLA_GPU_BACKEND=CUDA/' "$stage8/install_spla.sh"
+    sed -i "s/-DSIRIUS_USE_PUGIXML=ON/& -DSIRIUS_USE_CUDA=ON $cuda/" "$stage8/install_sirius.sh"
+    # SIRIUS's package still asks for the FindCUDA module that CMake removed; its cudalibs target finds CUDAToolkit.
+    sed -i '/^ *cd SIRIUS-/a sed -i "/find_dependency(CUDA /d" cmake/sirius_cxxConfig.cmake.in' "$stage8/install_sirius.sh"
+    for library in spfft spla sirius; do
+        sed -i 's/\[ "$ENABLE_CUDA" = "__TRUE__" \]/false/' "$stage8/install_$library.sh"
+    done
+fi
 pick() { if [ "$1" = true ]; then echo "$2"; else echo no; fi; }
 set -- --target-cpu=haswell --with-gcc="$gcc" --with-cmake=system --with-"$mpi"=system --with-fftw=system \
     --with-openblas=system --with-scalapack=system --with-libxc=install --with-libint=install \
@@ -56,7 +70,10 @@ set -- --target-cpu=haswell --with-gcc="$gcc" --with-cmake=system --with-"$mpi"=
     --with-sirius="$(pick "$large" install)" --with-gsl="$(pick "$large" install)" \
     --with-spglib="$(pick "$large" install)" --with-libvori="$(pick "$large" install)"
 [ -z "$gpu" ] || set -- "$@" --enable-cuda --gpu-ver="$gpu"
-(cd "$deps" && CPATH="$WISE_PREFIX/include" LIBRARY_PATH="$WISE_PREFIX/lib" \
+# The toolchain downloads with wget, which gives up on HTTP errors and refused connections.
+printf '%s\n' 'tries = 5' 'waitretry = 30' 'timeout = 60' 'retry_connrefused = on' \
+    'retry_on_http_error = 429,500,502,503,504' > "$work/wgetrc"
+(cd "$deps" && WGETRC="$work/wgetrc" CPATH="$WISE_PREFIX/include" LIBRARY_PATH="$WISE_PREFIX/lib" \
     ./install_cp2k_toolchain.sh -j "$(nproc)" "$@")
 rm -rf "$deps/build"
 
@@ -70,6 +87,7 @@ set -- -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$WISE_PREFIX" \
 [ "$large" != true ] || set -- "$@" -DCP2K_USE_COSMA=ON -DCP2K_USE_SPLA=ON -DCP2K_USE_SIRIUS=ON \
     -DCP2K_USE_SPGLIB=ON -DCP2K_USE_VORI=ON
 [ -z "$gpu" ] || set -- "$@" -DCP2K_USE_ACCEL=CUDA -DCP2K_WITH_GPU="$gpu"
+[ -z "$gpu" ] || [ "$large" != true ] || set -- "$@" -DCP2K_USE_SPLA_GEMM_OFFLOADING=ON
 if wise_cuda; then
     # CP2K and its dependencies use the same Fortran ABI and OpenMP runtime.
     set -- "$@" -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" -DCMAKE_Fortran_COMPILER="$FC" \
@@ -81,12 +99,30 @@ set -f
 set -- "$@" ${CMAKEARGS:-}
 set +f
 bash -c '. "$1/install/setup" && shift && cmake "$@"' sh "$deps" -S "$work/src" -B "$work/build" "$@"
+cache=$work/build/CMakeCache.txt
 # The toolchain links COSMA and SIRIUS statically, and CMake silently drops an option whose dependency is
 # off: check what will actually be built.
 for option in MPI LIBXC LIBINT2 FFTW3 LIBXS LIBXSMM $([ "$elpa" != true ] || echo ELPA) \
     $([ "$hdf5" != true ] || echo HDF5) $([ "$large" != true ] || echo COSMA SPLA SIRIUS SPGLIB VORI); do
-    grep -q "^CP2K_USE_$option:BOOL=ON$" "$work/build/CMakeCache.txt" || wise_fail "CP2K_USE_$option is off"
+    grep -q "^CP2K_USE_$option:BOOL=ON$" "$cache" || wise_fail "CP2K_USE_$option is off"
 done
+if [ -n "$gpu" ]; then
+    for option in ENABLE_ELPA_GPU ENABLE_GRID_GPU ENABLE_DBM_GPU ENABLE_PW_GPU \
+        $([ "$large" != true ] || echo USE_SPLA_GEMM_OFFLOADING); do
+        grep -q "^CP2K_$option:BOOL=ON$" "$cache" || wise_fail "CP2K_$option is off"
+    done
+    for package in DBCSR $([ "$large" != true ] || echo cosma); do
+        grep -q "^${package}_DIR:PATH=.*-cuda/" "$cache" || wise_fail "CP2K found a CPU build of $package"
+    done
+    uses() { # library symbol: the static library calls the GPU
+        nm "$deps"/install/$1 2>/dev/null | grep -q "$2" || wise_fail "$1 is a CPU build"
+    }
+    if [ "$large" = true ]; then
+        uses 'SpFFT-*/lib/libspfft.a' cufftExec
+        uses 'SpLA-*/lib/libspla.a' cublas
+        uses 'sirius-*/lib/libsirius_cxx.a' __cudaRegisterFatBinary
+    fi
+fi
 cmake --build "$work/build" -j"$(nproc)"
 cmake --install "$work/build" --strip
 find "$deps/install" -maxdepth 2 -type d \( -name lib -o -name lib64 \) > /etc/ld.so.conf.d/wise-cp2k.conf

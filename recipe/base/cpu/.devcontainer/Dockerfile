@@ -9,5 +9,5 @@ RUN if [ ! -s /etc/ssl/certs/ca-certificates.crt ]; then \
         install -D -m 0644 /tmp/wise-apt-ca.pem /etc/ssl/certs/ca-certificates.crt; \
     fi && rm -f /tmp/wise-apt-ca.pem \
     && . /etc/os-release && test "$VERSION_ID" = 24.04 \
-    && printf 'APT::Snapshot "%s";\n' "$APT_SNAPSHOT" > /etc/apt/apt.conf.d/50wise-snapshot \
+    && printf 'APT::Snapshot "%s";\nAcquire::Retries "5";\n' "$APT_SNAPSHOT" > /etc/apt/apt.conf.d/50wise-snapshot \
     && test ! -e /usr/local/cuda && ! command -v nvcc

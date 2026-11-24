@@ -14,6 +14,10 @@ wise_id=verify
 . /opt/wise/lib/wise/feature.sh
 
 fail() { echo "verify: $*" >&2; exit 1; }
+# An empty entry in a search path means the current directory.
+for path in "${LD_LIBRARY_PATH:-}" "${CPATH:-}" "${LIBRARY_PATH:-}" "$PATH"; do
+    [ -z "$path" ] || case ":$path:" in *::*) fail "a search path includes the current directory: $path" ;; esac
+done
 for tool in lmp pw.x ph.x pw2wannier90.x wannier90.x cp2k.psmp packmol mpirun ucx_info nc-config h5pcc \
     conda uv rustc cargo node npm; do
     command -v "$tool"
@@ -169,6 +173,16 @@ grep -q 'KOKKOS FFT library *= *CUFFT' lammps-help.txt
 ldd /opt/wise/bin/pw.x | grep -q libcufft
 ! ldd /opt/wise/bin/pw.x | grep -q libgomp || fail "the GPU pw.x loads GCC's OpenMP runtime"
 ldd /opt/wise/bin/cp2k.psmp | grep -q libcudart
+for feature in offload_cuda dbcsr_acc spla_gemm_offloading; do
+    echo "$cp2k_version" | grep -qw "$feature" || fail "CP2K lacks $feature"
+done
+! echo "$cp2k_version" | grep -q 'no_offload_' || fail "CP2K keeps a GPU path on the CPU"
+for lib in libcufft libcublas libcusolver; do
+    ldd /opt/wise/bin/cp2k.psmp | grep -q "$lib" || fail "cp2k.psmp does not link $lib"
+done
+for lib in libcublas libcusolver; do
+    ldd /opt/wise/lib/libelpa_openmp.so | grep -q "$lib" || fail "ELPA does not link $lib"
+done
 echo "$ompi" | grep -Eq '(^|:)mpi_built_with_cuda_support:value:true$' || fail "Open MPI is not CUDA-aware"
 [ "${WISE_VERIFY_GPU:-1}" = 1 ] || exit 0
 nvidia-smi -L

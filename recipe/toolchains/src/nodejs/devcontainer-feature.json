@@ -1,6 +1,6 @@
 {
   "id": "nodejs",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "name": "Node.js",
   "description": "Installs a checksum-verified distribution of Node.js.",
   "dependsOn": {

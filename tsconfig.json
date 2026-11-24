@@ -14,5 +14,5 @@
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["cli/src", "cli/test", "recipe/test"]
+  "include": ["cli/src", "cli/test", "recipe/test", "recipe/delivery"]
 }

@@ -14,9 +14,7 @@ version=0.9.26
 archive="uv-$arch-unknown-linux-gnu.tar.gz"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-curl --fail --location --silent --show-error --retry 3 --proto '=https' \
-    "https://github.com/astral-sh/uv/releases/download/$version/$archive" -o "$work/$archive"
-printf '%s  %s\n' "$checksum" "$work/$archive" | sha256sum --check
+wise_download "https://github.com/astral-sh/uv/releases/download/$version/$archive" "$checksum" "$work/$archive"
 tar -xzf "$work/$archive" --strip-components=1 -C "$work"
 install -m 0755 "$work/uv" "$work/uvx" /usr/local/bin/
 wise_done

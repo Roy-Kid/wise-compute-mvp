@@ -1,0 +1,80 @@
+name: Build one stage of a materials image
+
+on:
+  workflow_call:
+    inputs:
+      variant:
+        type: string
+        required: true
+      goal:
+        description: Stage number, or release
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: ${{ inputs.variant }} ${{ inputs.goal }}
+    runs-on: ${{ vars[format('{0}_BUILD_RUNNER', inputs.variant)] || 'ubuntu-24.04' }}
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: bash
+    env:
+      VARIANT: ${{ inputs.variant }}
+      GOAL: ${{ inputs.goal }}
+      HUB_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY }}
+      HUB_USER: ${{ vars.DOCKERHUB_USERNAME }}
+    steps:
+      - name: Check build configuration
+        env:
+          HAS_TOKEN: ${{ secrets.DOCKERHUB_TOKEN != '' }}
+        run: |
+          : "${HUB_USER:?Set DOCKERHUB_USERNAME to the Docker Hub login}"
+          [[ "$HUB_REPOSITORY" =~ ^[a-z0-9_-]+/[a-z0-9_-]+$ ]] || { echo 'Set DOCKERHUB_REPOSITORY to namespace/repository'; exit 1; }
+          [[ "$HAS_TOKEN" == true ]] || { echo 'Set the DOCKERHUB_TOKEN Actions secret'; exit 1; }
+          test "$(uname -m)" = x86_64
+          docker info --format '{{.ServerVersion}}'
+          docker buildx version
+
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Reclaim build space on the standard hosted runner
+        if: runner.environment == 'github-hosted' && (vars[format('{0}_BUILD_RUNNER', inputs.variant)] || 'ubuntu-24.04') == 'ubuntu-24.04'
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+          df -h /var/lib/docker
+
+      - name: Build linux/amd64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm ci --registry=https://registry.npmjs.org --replace-registry-host=always
+          npm test
+          printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          export STAGE_REPOSITORY="ghcr.io/${GITHUB_REPOSITORY,,}/build"
+          unset GITHUB_TOKEN
+          node recipe/delivery/ci-stage.ts "$VARIANT" "$GOAL"
+
+      - name: Publish verified image to Docker Hub
+        if: inputs.goal == 'release'
+        env:
+          HUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          export DOCKER_CONFIG
+          DOCKER_CONFIG=$(mktemp -d)
+          trap 'rm -rf "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$HUB_TOKEN" | docker login --username "$HUB_USER" --password-stdin
+          tag=$(jq -er --arg variant "$VARIANT" '[.app, $variant, .version] | join("-")' recipe/delivery/cpu/lavas-release.json)
+          node cli/dist/cli.js image push "wise-compute:materials-$VARIANT" "docker.io/$HUB_REPOSITORY:$tag" > release.json
+          jq -r '.reference' release.json >> "$GITHUB_STEP_SUMMARY"
