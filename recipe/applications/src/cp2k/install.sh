@@ -15,6 +15,7 @@ wise_require_if "$elpa" elpa "elpa=true"
 wise_require_if "$hdf5" hdf5 "hdf5=true"
 wise_require_if "$large" hdf5 "largeSystems=true (SIRIUS)"
 [ "$large" != true ] || [ "$hdf5" = true ] || wise_fail "largeSystems=true needs hdf5=true (SIRIUS)"
+wise_apt wget
 wise_workdir
 work=$WISE_WORK
 wise_fetch_git https://github.com/cp2k/cp2k.git 67b5da876dd6a76b8b021d5a04d1c81ba79a4c50 "$work/src" --all
