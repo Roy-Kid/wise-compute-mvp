@@ -1,6 +1,6 @@
 {
   "id": "elpa",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "name": "ELPA",
   "description": "Builds OpenMP ELPA 2026.02.002 against the image's MPI, ScaLAPACK and OpenBLAS. The CUDA build uses nvfortran and enables NVIDIA GPU kernels.",
   "options": {

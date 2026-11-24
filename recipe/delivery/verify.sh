@@ -55,12 +55,18 @@ done
 
 # Every MPI consumer uses the selected provider's library and launcher.
 for binary in /opt/wise/bin/lmp /opt/wise/bin/pw.x /opt/wise/bin/cp2k.psmp \
-    "$("$WISE_VENV/bin/python" -c 'import mpi4py.MPI as m; print(m.__file__)')"; do
+    "$(MPI4PY_RC_INITIALIZE=0 "$WISE_VENV/bin/python" -c 'import mpi4py.MPI as m; print(m.__file__)')"; do
     wise_mpi_linked "$binary"
 done
 test "$(readlink -f "$(command -v mpirun)")" = "$(readlink -f "$WISE_MPI_ROOT/bin/mpirun")"
 
-mpirun -n 2 "$WISE_VENV/bin/python" -c 'from mpi4py import MPI; assert MPI.COMM_WORLD.allreduce(1) == 2'
+mpirun -n 2 "$WISE_VENV/bin/python" -c '
+from mpi4py import MPI
+level = MPI.Query_thread()
+if level not in (MPI.THREAD_SERIALIZED, MPI.THREAD_MULTIPLE):
+    raise RuntimeError(f"ELPA with OpenMP requires at least MPI_THREAD_SERIALIZED, got {level}")
+assert MPI.COMM_WORLD.allreduce(1) == 2
+'
 cp2k.psmp --version
 
 work=$(mktemp -d)
