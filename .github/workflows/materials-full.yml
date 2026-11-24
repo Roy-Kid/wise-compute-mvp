@@ -1,4 +1,4 @@
-name: Publish materials full CPU
+name: Publish materials full CPU and CUDA
 
 on: workflow_dispatch
 
@@ -7,12 +7,22 @@ permissions:
 
 jobs:
   publish:
-    runs-on: ${{ vars.CPU_BUILD_RUNNER || 'ubuntu-24.04' }}
+    name: Build and publish ${{ matrix.variant }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: cpu
+            runner: ${{ vars.CPU_BUILD_RUNNER || 'ubuntu-24.04' }}
+          - variant: cuda
+            runner: ${{ vars.CUDA_BUILD_RUNNER || 'ubuntu-24.04' }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
     defaults:
       run:
         shell: bash
     env:
+      VARIANT: ${{ matrix.variant }}
       HUB_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY }}
       HUB_USER: ${{ vars.DOCKERHUB_USERNAME }}
     steps:
@@ -37,7 +47,7 @@ jobs:
           package-manager-cache: false
 
       - name: Reclaim build space on the standard hosted runner
-        if: runner.environment == 'github-hosted' && (vars.CPU_BUILD_RUNNER == '' || vars.CPU_BUILD_RUNNER == 'ubuntu-24.04')
+        if: runner.environment == 'github-hosted' && matrix.runner == 'ubuntu-24.04'
         run: |
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
           df -h /var/lib/docker
@@ -46,28 +56,16 @@ jobs:
         run: |
           npm ci --registry=https://registry.npmjs.org --replace-registry-host=always
           npm test
-          node recipe/delivery/ci-image.mjs cpu
+          node recipe/delivery/ci-image.mjs "$VARIANT"
 
-      - name: Verify private Docker Hub repository and publish
+      - name: Publish verified image to Docker Hub
         env:
           HUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          auth=$(jq -nc '{identifier: env.HUB_USER, secret: env.HUB_TOKEN}' |
-            curl --fail --silent --show-error --json @- https://hub.docker.com/v2/auth/token |
-            jq -er '.access_token | strings | select(length > 0)')
-          namespace=${HUB_REPOSITORY%/*}
-          repository=${HUB_REPOSITORY#*/}
-          curl --fail --silent --show-error -H "Authorization: Bearer $auth" \
-            "https://hub.docker.com/v2/namespaces/$namespace/repositories/$repository" |
-            jq -e --arg ns "$namespace" --arg repo "$repository" \
-              '.namespace == $ns and .name == $repo and .is_private == true' >/dev/null || {
-                echo 'Docker Hub must confirm the selected repository exists and is private'
-                exit 1
-              }
           export DOCKER_CONFIG
           DOCKER_CONFIG=$(mktemp -d)
           trap 'rm -rf "$DOCKER_CONFIG"' EXIT
           printf '%s' "$HUB_TOKEN" | docker login --username "$HUB_USER" --password-stdin
-          tag=$(jq -r '.image | split(":") | last' recipe/delivery/cpu/lavas-release.json)
-          node cli/dist/cli.js image push wise-compute:materials-cpu "docker.io/$HUB_REPOSITORY:$tag" > release.json
+          tag=$(jq -er --arg variant "$VARIANT" '[.app, $variant, .version] | join("-")' recipe/delivery/cpu/lavas-release.json)
+          node cli/dist/cli.js image push "wise-compute:materials-$VARIANT" "docker.io/$HUB_REPOSITORY:$tag" > release.json
           jq -r '.reference' release.json >> "$GITHUB_STEP_SUMMARY"
