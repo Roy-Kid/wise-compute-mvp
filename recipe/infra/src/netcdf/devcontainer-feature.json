@@ -1,6 +1,6 @@
 {
   "id": "netcdf",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "name": "Parallel NetCDF-C",
   "description": "Builds NetCDF-C 4.10.1 into /opt/wise on the parallel HDF5 of the hdf5 Feature (NetCDF-4 parallel I/O); no network access (DAP, byte-range, NCZarr off). Provider of LAMMPS NETCDF.",
   "dependsOn": {

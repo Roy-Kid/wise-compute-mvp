@@ -5,6 +5,7 @@ wise_id=netcdf
 
 wise_require_capability mpi
 wise_require hdf5
+wise_apt m4
 wise_workdir
 cd "$WISE_WORK"
 wise_fetch_tar https://github.com/Unidata/netcdf-c/archive/refs/tags/v4.10.1.tar.gz \
