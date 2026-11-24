@@ -22,7 +22,7 @@ jobs:
     secrets: inherit
 
   stage2:
-    name: LAMMPS
+    name: ELPA
     needs: stage1
     uses: ./.github/workflows/materials-stage.yml
     with:
@@ -31,7 +31,7 @@ jobs:
     secrets: inherit
 
   stage3:
-    name: Quantum ESPRESSO
+    name: LAMMPS
     needs: stage2
     uses: ./.github/workflows/materials-stage.yml
     with:
@@ -40,7 +40,7 @@ jobs:
     secrets: inherit
 
   stage4:
-    name: CP2K
+    name: Quantum ESPRESSO
     needs: stage3
     uses: ./.github/workflows/materials-stage.yml
     with:
@@ -48,9 +48,18 @@ jobs:
       goal: '4'
     secrets: inherit
 
+  stage5:
+    name: CP2K
+    needs: stage4
+    uses: ./.github/workflows/materials-stage.yml
+    with:
+      variant: ${{ inputs.variant }}
+      goal: '5'
+    secrets: inherit
+
   release:
     name: verify and publish
-    needs: stage4
+    needs: stage5
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}

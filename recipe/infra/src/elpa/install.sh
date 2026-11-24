@@ -19,11 +19,13 @@ set -- --prefix="$WISE_PREFIX" --disable-static --enable-openmp \
     FC="$WISE_MPI_ROOT/bin/mpifort" CC="$WISE_MPI_ROOT/bin/mpicc" CXX="$WISE_MPI_ROOT/bin/mpicxx"
 if wise_cuda; then
     wise_nvfortran_env
+    # libtool does not know nvfortran behind mpifort and would compile the Fortran sources without -fPIC.
+    export FCFLAGS="$FCFLAGS -fPIC"
     # The HPC SDK keeps cuBLAS and cuSOLVER outside the CUDA directory.
     set -- "$@" --disable-avx2-kernels --disable-avx-kernels --disable-sse-kernels \
         --enable-nvidia-gpu-kernels --with-NVIDIA-GPU-compute-capability=sm_"$arch" \
         --with-cuda-path="$CUDA_HOME" CPPFLAGS="-I$NVHPC_ROOT/math_libs/include" \
-        LDFLAGS="-L$NVHPC_ROOT/math_libs/lib64 -L$CUDA_HOME/lib64/stubs"
+        LDFLAGS="-L$NVHPC_ROOT/math_libs/lib64 -L$CUDA_HOME/lib64/stubs" LIBS=-lstdc++
 fi
 mkdir build
 cd build
