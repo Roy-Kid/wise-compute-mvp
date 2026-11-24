@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "build": "npm run build -w cli",
-    "test": "tsc -p . && node --test cli/test/*.test.ts stack/test/*.test.ts"
+    "test": "tsc -p . && node --test cli/test/*.test.ts recipe/test/*.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { join } from "node:path";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, dirname, join } from "node:path";
 import { describe, test } from "node:test";
 import { DevContainerBuilder } from "../src/build.ts";
 import { Docker, RegistryError } from "../src/docker.ts";
@@ -96,6 +98,33 @@ describe("build", () => {
     await assert.rejects(
       builder.build({ workspace: ".", output: { image: "x" }, args: ["--push=true"] }),
       /--push is set by wisehub/);
+  });
+
+  test("passes a base image override in a sibling config and cleans it up on a build failure", async t => {
+    const workspace = mkdtempSync(join(tmpdir(), "wisehub-base-"));
+    t.after(() => rmSync(workspace, { recursive: true, force: true }));
+    const original = join(workspace, ".devcontainer.json");
+    const text = `{
+      // The base can change without editing the recipe.
+      "build": { "dockerfile": "Dockerfile", "args": { "MODE": "debug" }, },
+    }`;
+    writeFileSync(original, text);
+    let staged = "";
+    const execute: Run = async (program, args) => {
+      if (program !== process.execPath) return ok();
+      staged = args[args.indexOf("--config") + 1];
+      assert.equal(dirname(staged), workspace);
+      assert.ok(basename(staged).startsWith("."));
+      assert.deepEqual(JSON.parse(readFileSync(staged, "utf8")).build, {
+        dockerfile: "Dockerfile", args: { MODE: "debug", BASE_IMAGE: fixed },
+      });
+      return fail("build failed");
+    };
+    const builder = new DevContainerBuilder(new Docker(execute), execute);
+    await assert.rejects(builder.build({ workspace, baseImage: fixed, output: { image: "x" } }), /build failed/);
+    assert.ok(staged);
+    assert.equal(existsSync(staged), false);
+    assert.equal(readFileSync(original, "utf8"), text);
   });
 });
 

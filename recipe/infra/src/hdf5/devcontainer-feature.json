@@ -1,0 +1,14 @@
+{
+  "id": "hdf5",
+  "version": "1.0.1",
+  "name": "Parallel HDF5",
+  "description": "Builds parallel HDF5 2.2.0 with C, Fortran, MPI-IO and zlib. Uses the image's MPI compiler wrappers and builds the Fortran modules with GNU Fortran on CPU or nvfortran on CUDA.",
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:2": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:2": {}
+  },
+  "installsAfter": [
+    "harbor.will/wise/wise-compute-features/infra/openmpi:2",
+    "harbor.will/wise/wise-compute-features/infra/mpich:2"
+  ]
+}

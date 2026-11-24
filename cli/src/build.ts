@@ -1,12 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { resolve } from "node:path";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
+import { parse } from "jsonc-parser";
+import type { ParseError } from "jsonc-parser";
 import { devcontainerCli } from "./devcontainer.ts";
 import { Docker } from "./docker.ts";
 import type { LocalImage } from "./docker.ts";
 import { stageLocalFeatures } from "./features.ts";
 import { checked, run } from "./process.ts";
 import type { Run } from "./process.ts";
-import { parsePlatform } from "./reference.ts";
+import { parsePlatform, parseRemoteReference } from "./reference.ts";
 
 export type BuildOutput =
   | { image: string }
@@ -16,6 +19,8 @@ export interface BuildRequest {
   workspace: string;
   config?: string;
   platform?: string;
+  /** Override the Dockerfile's BASE_IMAGE build argument with a fully qualified image reference. */
+  baseImage?: string;
   output: BuildOutput;
   /**
    * Stack directory whose Features replace their registry references for this build (development and
@@ -37,6 +42,23 @@ const reservedFlags = new Set([
   "--output", "--docker-path", "--no-lockfile", "--help", "--version", "--",
 ]);
 
+function stageBaseImage(source: string, baseImage: string): string {
+  const errors: ParseError[] = [];
+  const config = parse(readFileSync(source, "utf8"), errors, { allowTrailingComma: true }) as {
+    build?: { dockerfile?: string; args?: Record<string, string> };
+  } | null | undefined;
+  if (errors.length) throw new Error(`Invalid Dev Container configuration: ${source}`);
+  if (typeof config?.build?.dockerfile !== "string") {
+    throw new Error("--base-image requires a Dev Container configuration with build.dockerfile");
+  }
+  config.build.args = { ...config.build.args, BASE_IMAGE: baseImage };
+  // Keep relative Dockerfile and Feature paths and the lockfile naming convention.
+  const prefix = basename(source).startsWith(".") ? "." : "";
+  const staged = join(dirname(source), `${prefix}devcontainer.wisehub-local-${randomUUID()}.json`);
+  writeFileSync(staged, JSON.stringify(config, null, 2) + "\n", { flag: "wx", mode: 0o600 });
+  return staged;
+}
+
 /** Builds a Dev Container workspace into named local images and reports what Docker actually holds. */
 export class DevContainerBuilder {
   private readonly docker: Docker;
@@ -49,6 +71,7 @@ export class DevContainerBuilder {
 
   async build(request: BuildRequest): Promise<BuildResult> {
     if (request.platform) parsePlatform(request.platform);
+    if (request.baseImage !== undefined) parseRemoteReference(request.baseImage);
     const extra = request.args ?? [];
     const clash = extra.map(arg => arg.split("=")[0]).find(flag => reservedFlags.has(flag));
     if (clash) throw new Error(`${clash} is set by wisehub image build; call devcontainer directly for other output modes`);
@@ -57,22 +80,28 @@ export class DevContainerBuilder {
     if (!outputs.length || outputs.some(item => !item.image || item.image.startsWith("-"))) {
       throw new Error("Build requires named image outputs");
     }
-    // A single image is built under a unique staging name and promoted by ID, so a concurrent
-    // build cannot make us report someone else's image. Compose names come from the Compose file.
-    const staging = "image" in request.output ? `wise-build/staging:${randomUUID()}` : undefined;
-
     const cli = devcontainerCli();
     const workspace = resolve(request.workspace);
     const config = request.config ? resolve(workspace, request.config) : undefined;
+    const nested = join(workspace, ".devcontainer/devcontainer.json");
+    const source = config ?? (existsSync(nested) ? nested : join(workspace, ".devcontainer.json"));
     const local = request.localFeatures
-      ? stageLocalFeatures(config ?? resolve(workspace, ".devcontainer/devcontainer.json"), request.localFeatures)
+      ? stageLocalFeatures(source, request.localFeatures)
       : undefined;
-    const args = ["build", "--workspace-folder", workspace, "--docker-path", this.docker.binary];
-    if (local) args.push("--config", local.config, "--no-lockfile");
-    else if (config) args.push("--config", config);
-    if (request.platform) args.push("--platform", request.platform);
-    if (staging) args.push("--image-name", staging);
+    let override: string | undefined;
+    let staging: string | undefined;
     try {
+      if (request.baseImage !== undefined) override = stageBaseImage(local?.config ?? source, request.baseImage);
+      const buildConfig = override ?? local?.config ?? config;
+      const args = ["build", "--workspace-folder", workspace, "--docker-path", this.docker.binary];
+      if (buildConfig) args.push("--config", buildConfig);
+      if (local) args.push("--no-lockfile");
+      if (request.platform) args.push("--platform", request.platform);
+      // Promote by ID after building, so concurrent builds cannot supply each other's images.
+      if ("image" in request.output) {
+        staging = `wise-build/staging:${randomUUID()}`;
+        args.push("--image-name", staging);
+      }
       await checked("devcontainer", this.execute(process.execPath, [cli.script, ...args, ...extra],
         { cwd: workspace, stdio: "tee" }));
       const images = await Promise.all(outputs.map(async output => {
@@ -82,6 +111,7 @@ export class DevContainerBuilder {
       }));
       return { engineVersion: cli.version, images };
     } finally {
+      if (override) rmSync(override, { force: true });
       local?.cleanup();
       if (staging) await this.docker.removeImage(staging).catch(() => undefined);
     }

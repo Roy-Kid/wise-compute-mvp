@@ -6,14 +6,15 @@ import { FeaturePublisher } from "./features.ts";
 import { OciRegistry } from "./registry.ts";
 
 const usage = `Usage:
-  wisehub image build [--workspace-folder DIR] [--config FILE] [--platform OS/ARCH] [--local-features STACK]
+  wisehub image build [--workspace-folder DIR] [--config FILE] [--platform OS/ARCH] [--base-image REF] [--local-features RECIPE]
                       (--image NAME | --service-image SERVICE=NAME ...) [-- devcontainer build flags]
   wisehub image push SOURCE REGISTRY/REPOSITORY:TAG
   wisehub image pull REGISTRY/REPOSITORY(:TAG|@DIGEST) [--platform OS/ARCH]
-  wisehub feature publish STACK --registry HOST --namespace NAMESPACE
+  wisehub feature publish RECIPE --registry HOST --namespace NAMESPACE
 
---local-features builds with the stack's Feature sources in place of their registry references.
-feature publish pushes each collection STACK/<collection>/src to HOST/NAMESPACE/<collection>, lowest first.
+--local-features builds with the recipe's Feature sources in place of their registry references.
+--base-image overrides the Dockerfile's BASE_IMAGE build argument.
+feature publish pushes each collection RECIPE/<collection>/src to HOST/NAMESPACE/<collection>, lowest first.
 
 Results are printed to stdout as JSON; progress goes to stderr.
 For any other Dev Container operation, run the devcontainer CLI directly.`;
@@ -32,6 +33,7 @@ async function build(args: string[]): Promise<void> {
       "workspace-folder": { type: "string", default: "." },
       config: { type: "string" },
       platform: { type: "string" },
+      "base-image": { type: "string" },
       image: { type: "string" },
       "service-image": { type: "string", multiple: true },
       "local-features": { type: "string" },
@@ -52,6 +54,7 @@ async function build(args: string[]): Promise<void> {
     workspace: values["workspace-folder"],
     config: values.config,
     platform: values.platform,
+    baseImage: values["base-image"],
     output: values.image ? { image: values.image } : { services },
     localFeatures: values["local-features"],
     args: delimiter === -1 ? [] : args.slice(delimiter + 1),
@@ -78,7 +81,7 @@ async function publish(args: string[]): Promise<void> {
     options: { registry: { type: "string" }, namespace: { type: "string" } },
   });
   if (positionals.length !== 1 || !values.registry || !values.namespace) {
-    throw new UsageError("feature publish takes STACK, --registry and --namespace");
+    throw new UsageError("feature publish takes RECIPE, --registry and --namespace");
   }
   print(await new FeaturePublisher().publish(positionals[0], values.registry, values.namespace));
 }

@@ -5,14 +5,16 @@
 ## 构建镜像
 
 ```text
-wisehub image build [--workspace-folder DIR] [--config FILE] [--platform OS/ARCH]
-                    [--local-features STACK] (--image NAME | --service-image SERVICE=NAME ...)
+wisehub image build [--workspace-folder DIR] [--config FILE] [--platform OS/ARCH] [--base-image REF]
+                    [--local-features RECIPE] (--image NAME | --service-image SERVICE=NAME ...)
                     [-- devcontainer build flags]
 ```
 
 `--image` 构建到唯一的临时标签，再按镜像 ID 打目标标签。`--service-image` 声明 Compose 配置中各服务已有的镜像名。指定 `--platform` 时会校验实际平台。
 
-默认由 Dev Container CLI 解析 registry 引用并生成或校验 `devcontainer-lock.json`。`--local-features STACK` 使用版本匹配的本地 Feature 副本，构建结束后删除副本，此模式停用锁文件。`--` 后可传入 `--frozen-lockfile` 等构建选项。镜像输出相关选项由 WiseHub 管理。
+`--base-image REF` 在本次构建中覆盖 Dockerfile 的 `BASE_IMAGE` 参数。配置须使用 `build.dockerfile`，引用可传完整的 registry 标签或 digest。
+
+默认由 Dev Container CLI 解析 registry 引用并生成或校验 `devcontainer-lock.json`。`--local-features RECIPE` 使用配方目录中版本匹配的本地 Feature 副本，构建结束后删除副本，此模式停用锁文件。`--` 后可传入 `--frozen-lockfile` 等构建选项。镜像输出相关选项由 WiseHub 管理。
 
 输出 `{ engineVersion, images: [{ reference, id, platform, service? }] }`。
 
@@ -31,10 +33,10 @@ wisehub image pull REGISTRY/REPOSITORY(:TAG|@DIGEST) [--platform OS/ARCH]
 ## 发布 Feature
 
 ```text
-wisehub feature publish STACK --registry HOST --namespace NAMESPACE
+wisehub feature publish RECIPE --registry HOST --namespace NAMESPACE
 ```
 
-发布前校验 `STACK/<collection>/src` 中的 Feature 依赖引用和版本，再按依赖顺序发布到 `HOST/NAMESPACE/<collection>`。已存在的版本会跳过，新版本按 Dev Container CLI 规则生成版本标签。输出 `[{ collection, namespace, features }]`。
+发布前校验 `RECIPE/<collection>/src` 中的 Feature 依赖引用和版本，再按依赖顺序发布到 `HOST/NAMESPACE/<collection>`。已存在的版本会跳过，新版本按 Dev Container CLI 规则生成版本标签。输出 `[{ collection, namespace, features }]`。
 
 ## 运行环境
 

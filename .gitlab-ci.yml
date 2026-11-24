@@ -50,7 +50,7 @@ features:
   resource_group: publish-features
   script:
     - *configure_harbor
-    - node cli/dist/cli.js feature publish stack --registry "$HARBOR_REGISTRY" --namespace "$FEATURE_NAMESPACE" > features.json
+    - node cli/dist/cli.js feature publish recipe --registry "$HARBOR_REGISTRY" --namespace "$FEATURE_NAMESPACE" > features.json
   artifacts:
     expire_in: never
     paths: [features.json]
@@ -86,11 +86,11 @@ materials:verify:
   extends: .materials
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes: [stack/**/*, cli/**/*, package.json, package-lock.json, .gitlab-ci.yml]
+      changes: [recipe/**/*, cli/**/*, package.json, package-lock.json, .gitlab-ci.yml]
     - if: '$CI_PIPELINE_SOURCE == "web"'
   script:
     - start_docker
-    - node stack/delivery/ci-image.mjs "$VARIANT"
+    - node recipe/delivery/ci-image.mjs "$VARIANT"
   artifacts:
     when: always
     paths: [image.txt]
@@ -106,7 +106,7 @@ materials:publish:
     - install -D -m 0644 "$HARBOR_CA" /usr/local/share/ca-certificates/wise-harbor.crt
     - update-ca-certificates
     - start_docker
-    - node stack/delivery/ci-image.mjs "$VARIANT" --publish
+    - node recipe/delivery/ci-image.mjs "$VARIANT" --publish
   artifacts:
     when: always
     expire_in: never

@@ -1,0 +1,32 @@
+{
+  "name": "WiseHub materials CPU",
+  // Builds on the cpu base tier; every Feature is a published reference (see recipe/README.md).
+  "build": {
+    "dockerfile": "../../../base/cpu/.devcontainer/Dockerfile",
+    "context": "../../../base/cpu/.devcontainer"
+  },
+  // MPI inside one container: shared-memory transport needs a large /dev/shm, single-copy (CMA) needs
+  // ptrace between sibling ranks, RDMA needs unlimited locked memory. Add --device=/dev/infiniband and
+  // --network=host on InfiniBand/RoCE nodes.
+  "runArgs": ["--shm-size=16g", "--cap-add=SYS_PTRACE", "--ulimit", "memlock=-1:-1"],
+  "features": {
+    // The one MPI of this image; infra and application Features that need MPI install after it.
+    "harbor.will/wise/wise-compute-features/infra/openmpi:2": {},
+    "harbor.will/wise/wise-compute-features/toolchains/python:1": {},
+    "harbor.will/wise/wise-compute-features/toolchains/conda:1": {},
+    "harbor.will/wise/wise-compute-features/toolchains/uv:1": {},
+    "harbor.will/wise/wise-compute-features/toolchains/rust:1": {},
+    "harbor.will/wise/wise-compute-features/toolchains/nodejs:1": {},
+    // Parallel I/O and the distributed eigensolver for large systems.
+    "harbor.will/wise/wise-compute-features/infra/hdf5:1": {},
+    "harbor.will/wise/wise-compute-features/infra/netcdf:1": {},
+    "harbor.will/wise/wise-compute-features/infra/elpa:1": {},
+    "harbor.will/wise/wise-compute-features/applications/materials-python:1": {},
+    "harbor.will/wise/wise-compute-features/applications/mpi4py:1": {},
+    "harbor.will/wise/wise-compute-features/applications/lammps:2": { "extraPackages": "H5MD,NETCDF" },
+    "harbor.will/wise/wise-compute-features/applications/quantum-espresso:2": { "elpa": true, "hdf5": true },
+    "harbor.will/wise/wise-compute-features/applications/cp2k:2": { "elpa": true, "hdf5": true, "largeSystems": true },
+    "harbor.will/wise/wise-compute-features/applications/wannier90:1": {},
+    "harbor.will/wise/wise-compute-features/applications/packmol:1": {}
+  }
+}

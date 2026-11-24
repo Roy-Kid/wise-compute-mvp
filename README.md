@@ -3,7 +3,7 @@
 WiseHub 将 Dev Container 工作区构建为镜像，按 digest 推拉 OCI 镜像，并发布 Dev Container Feature。仓库包含 CPU 和 CUDA 两套材料计算镜像配置。
 
 - [CLI 用法](docs/cli.md)
-- [计算栈、运行与验收](stack/README.md)
+- [镜像配方、运行与验收](recipe/README.md)
 - [待办](docs/roadmap.md)
 
 ## 本地开发
@@ -13,7 +13,7 @@ WiseHub 将 Dev Container 工作区构建为镜像，按 digest 推拉 OCI 镜�
 ```bash
 npm ci
 npm test
-npx wisehub image build --workspace-folder stack/delivery/cpu --local-features stack --platform linux/amd64 --image wise-compute:materials-cpu
+npx wisehub image build --workspace-folder recipe/delivery/cpu --local-features recipe --platform linux/amd64 --image wise-compute:materials-cpu
 ```
 
 ## CI/CD

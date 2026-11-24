@@ -1,0 +1,34 @@
+{
+  "app": "materials-full",
+  "variant": "cpu",
+  "platform": "linux/amd64",
+  "version": "0.1.0-dev.1",
+  "image": "harbor.will/wise/wise-compute-image:materials-full-cpu-0.1.0-dev.1",
+  "base": {
+    "tag": "harbor.will/docker.io/library/ubuntu:24.04",
+    "digest": "sha256:67efaecc0031a612cf7bb3c863407018dbbef0a971f62032b77aa542ac8ac0d2"
+  },
+  "applications": {
+    "lammps": "stable_30Sep2026_update1",
+    "packmol": "21.2.3",
+    "quantum-espresso": "7.6",
+    "wannier90": "3.1.0",
+    "cp2k": "2026.2"
+  },
+  "pythonPackages": {
+    "ase": "3.26.0",
+    "pymatgen": "2025.10.7",
+    "spglib": "2.6.0",
+    "phonopy": "4.10.0",
+    "phono3py": "4.10.0",
+    "pyscf": "2.11.0",
+    "pycalphad": "0.11.2",
+    "MDAnalysis": "2.11.0",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "pandas": "2.3.3",
+    "matplotlib": "3.10.9",
+    "h5py": "3.16.0",
+    "mpi4py": "4.1.2"
+  }
+}

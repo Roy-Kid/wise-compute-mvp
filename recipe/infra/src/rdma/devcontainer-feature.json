@@ -1,0 +1,10 @@
+{
+  "id": "rdma",
+  "version": "1.0.1",
+  "name": "RDMA user space",
+  "description": "rdma-core (libibverbs, librdmacm and the verbs providers: mlx5, EFA, RoCE, ...) and libnuma: what UCX and libfabric need to drive InfiniBand and RoCE. Devices and kernel drivers come from the host (--device /dev/infiniband, --ulimit memlock=-1).",
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:2": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:2": {}
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "packmol",
+  "version": "1.1.1",
+  "name": "Packmol",
+  "description": "Builds Packmol 21.2.3 into /opt/wise.",
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:2": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:2": {}
+  }
+}

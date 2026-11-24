@@ -1,0 +1,15 @@
+{
+  "id": "scalapack",
+  "version": "1.2.1",
+  "name": "ScaLAPACK",
+  "description": "Builds ScaLAPACK 2.2.3 into /opt/wise against the image's MPI and OpenBLAS, with GNU Fortran on CPU and nvfortran on CUDA.",
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:2": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:2": {},
+    "harbor.will/wise/wise-compute-features/infra/linear-algebra:2": {}
+  },
+  "installsAfter": [
+    "harbor.will/wise/wise-compute-features/infra/openmpi:2",
+    "harbor.will/wise/wise-compute-features/infra/mpich:2"
+  ]
+}

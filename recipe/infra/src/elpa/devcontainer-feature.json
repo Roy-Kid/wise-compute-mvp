@@ -1,0 +1,23 @@
+{
+  "id": "elpa",
+  "version": "1.0.1",
+  "name": "ELPA",
+  "description": "Builds OpenMP ELPA 2026.02.002 against the image's MPI, ScaLAPACK and OpenBLAS. The CUDA build uses nvfortran and enables NVIDIA GPU kernels.",
+  "options": {
+    "cudaArch": {
+      "type": "string",
+      "default": "80",
+      "description": "Compute capability of the GPU kernels on the CUDA base image (sm_<value>)."
+    }
+  },
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:2": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:2": {},
+    "harbor.will/wise/wise-compute-features/infra/linear-algebra:2": {},
+    "harbor.will/wise/wise-compute-features/infra/scalapack:1": {}
+  },
+  "installsAfter": [
+    "harbor.will/wise/wise-compute-features/infra/openmpi:2",
+    "harbor.will/wise/wise-compute-features/infra/mpich:2"
+  ]
+}

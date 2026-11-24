@@ -1,0 +1,9 @@
+{
+  "id": "aliyun",
+  "version": "0.1.0",
+  "name": "Alibaba Cloud SDK placeholder",
+  "description": "Reserves an opt-in Feature for Alibaba Cloud server SDKs.",
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:2": {}
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "id": "linear-algebra",
+  "version": "2.0.1",
+  "name": "BLAS and LAPACK",
+  "description": "Installs OpenBLAS for BLAS/LAPACK with the OpenMP backend on CPU or the pthread backend on CUDA.",
+  "containerEnv": {
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:2": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:2": {}
+  }
+}

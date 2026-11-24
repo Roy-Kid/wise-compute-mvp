@@ -1,0 +1,11 @@
+{
+  "id": "core",
+  "version": "2.0.0",
+  "name": "WiseHub Feature core",
+  "description": "Provides the /opt/wise prefix, the Feature SDK, and capability lookup for software supplied by the base image or an installed Feature.",
+  "containerEnv": {
+    "WISE_PREFIX": "/opt/wise",
+    "PATH": "/opt/wise/bin:${PATH}",
+    "PKG_CONFIG_PATH": "/opt/wise/lib/pkgconfig"
+  }
+}
