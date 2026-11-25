@@ -49,7 +49,7 @@ wise_done
 
 两套交付默认设置 `--shm-size=16g`、`--cap-add=SYS_PTRACE` 和 `--ulimit memlock=-1:-1`。使用 InfiniBand/RoCE 时另加 `--device=/dev/infiniband --network=host`。GPUDirect RDMA 还需宿主机加载 `nvidia-peermem` 和 `gdrdrv`。OpenMP 默认将线程绑在相邻核心，每个 rank 默认 1 个线程。
 
-CUDA 交付验收要求 NVIDIA 驱动主版本至少为 575。交付主要针对 A100，可为 H100 单独配置 LAMMPS 的 `gpuArch: HOPPER90`、QE 的 `cudaCC: 90`、CP2K 的 `gpuVersion: H100` 和 ELPA 的 `cudaArch: 90`。
+CUDA 交付验收要求 NVIDIA 驱动主版本至少为 575。交付主要针对 A100，可为 H100 单独配置 LAMMPS 的 `gpuArch: HOPPER90`、QE 的 `cudaCC: 90`、`cp2k-toolchain` 的 `gpuVersion: H100` 和 ELPA 的 `cudaArch: 90`。
 
 ## 验收与基准
 

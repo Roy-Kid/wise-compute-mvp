@@ -1,0 +1,47 @@
+{
+  "id": "cp2k-toolchain",
+  "version": "1.0.0",
+  "name": "CP2K libraries",
+  "description": "Builds the libraries of CP2K 2026.2 with its checksum-verified toolchain, on the selected MPI, FFTW, ScaLAPACK and OpenBLAS. The CUDA base uses NVHPC to match the SDK MPI Fortran modules. ELPA, HDF5 and large-system libraries are optional; the cp2k Feature follows these choices.",
+  "options": {
+    "gpuVersion": {
+      "type": "string",
+      "proposals": [
+        "",
+        "V100",
+        "A100",
+        "H100"
+      ],
+      "default": "",
+      "description": "CP2K GPU target (kernels tuned for it; PTX is embedded, so newer GPUs JIT-compile); requires the CUDA base image. Empty builds the CPU version."
+    },
+    "elpa": {
+      "type": "boolean",
+      "default": false,
+      "description": "Use ELPA as the eigensolver; needs the elpa Feature."
+    },
+    "hdf5": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable HDF5 output; needs the hdf5 Feature."
+    },
+    "largeSystems": {
+      "type": "boolean",
+      "default": false,
+      "description": "Build COSMA, SpFFT, SpLA, SIRIUS (plane waves; needs hdf5), spglib and libvori with CP2K's toolchain. With gpuVersion, COSMA, SpFFT, SpLA and SIRIUS are GPU builds and CP2K offloads matrix products through SpLA."
+    }
+  },
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:2": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:2": {},
+    "harbor.will/wise/wise-compute-features/infra/linear-algebra:2": {},
+    "harbor.will/wise/wise-compute-features/infra/fftw:1": {},
+    "harbor.will/wise/wise-compute-features/infra/scalapack:1": {}
+  },
+  "installsAfter": [
+    "harbor.will/wise/wise-compute-features/infra/openmpi:2",
+    "harbor.will/wise/wise-compute-features/infra/mpich:2",
+    "harbor.will/wise/wise-compute-features/infra/elpa:1",
+    "harbor.will/wise/wise-compute-features/infra/hdf5:1"
+  ]
+}

@@ -11,9 +11,11 @@ cd "$WISE_WORK"
 wise_fetch_tar https://elpa.mpcdf.mpg.de/software/tarball-archive/Releases/2026.02.002/elpa-2026.02.002.tar.gz \
     02e3c59fec53cd8eb66a4cc15fa4fbf190cf9654227223fb8ad55713e9427932 src
 # x86-64-v3 baseline: AVX2 kernels, no AVX-512.
+# No test programs: nothing installs them, and HPC-X's mpifort puts a stray quote into the link line of the C ones.
 # Check MPI threading under the final image's launcher in verify.sh.
 set -- --prefix="$WISE_PREFIX" --disable-static --enable-openmp \
     --without-threading-support-check-during-build --enable-runtime-threading-support-checks --enable-allow-thread-limiting \
+    --disable-c-tests --disable-cpp-tests --disable-fortran-tests --disable-Fortran-tests \
     --disable-avx512-kernels --disable-sse-assembly-kernels \
     SCALAPACK_LDFLAGS="-L$WISE_PREFIX/lib -lscalapack -lopenblas" SCALAPACK_FCFLAGS="-I$WISE_PREFIX/include" \
     FC="$WISE_MPI_ROOT/bin/mpifort" CC="$WISE_MPI_ROOT/bin/mpicc" CXX="$WISE_MPI_ROOT/bin/mpicxx"

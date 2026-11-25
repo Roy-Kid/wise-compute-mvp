@@ -49,7 +49,7 @@ jobs:
     secrets: inherit
 
   stage5:
-    name: CP2K
+    name: CP2K libraries
     needs: stage4
     uses: ./.github/workflows/materials-stage.yml
     with:
@@ -57,9 +57,18 @@ jobs:
       goal: '5'
     secrets: inherit
 
+  stage6:
+    name: CP2K
+    needs: stage5
+    uses: ./.github/workflows/materials-stage.yml
+    with:
+      variant: ${{ inputs.variant }}
+      goal: '6'
+    secrets: inherit
+
   release:
     name: verify and publish
-    needs: stage5
+    needs: stage6
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}
