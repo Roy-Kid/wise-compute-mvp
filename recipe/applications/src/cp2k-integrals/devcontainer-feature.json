@@ -1,0 +1,17 @@
+{
+  "id": "cp2k-integrals",
+  "version": "1.0.0",
+  "name": "CP2K integral libraries",
+  "description": "Builds libint and libxc, the longest part of CP2K 2026.2's checksum-verified toolchain; the cp2k-toolchain Feature continues from here.",
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:2": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:2": {},
+    "harbor.will/wise/wise-compute-features/infra/linear-algebra:2": {},
+    "harbor.will/wise/wise-compute-features/infra/fftw:1": {},
+    "harbor.will/wise/wise-compute-features/infra/scalapack:1": {}
+  },
+  "installsAfter": [
+    "harbor.will/wise/wise-compute-features/infra/openmpi:2",
+    "harbor.will/wise/wise-compute-features/infra/mpich:2"
+  ]
+}

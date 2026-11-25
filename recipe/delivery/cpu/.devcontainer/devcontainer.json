@@ -25,7 +25,9 @@
     "harbor.will/wise/wise-compute-features/applications/mpi4py:1": {},
     "harbor.will/wise/wise-compute-features/applications/lammps:2": { "extraPackages": "H5MD,NETCDF" },
     "harbor.will/wise/wise-compute-features/applications/quantum-espresso:2": { "elpa": true, "hdf5": true },
-    "harbor.will/wise/wise-compute-features/applications/cp2k:2": { "elpa": true, "hdf5": true, "largeSystems": true },
+    "harbor.will/wise/wise-compute-features/applications/cp2k-integrals:1": {},
+    "harbor.will/wise/wise-compute-features/applications/cp2k-toolchain:1": { "elpa": true, "hdf5": true, "largeSystems": true },
+    "harbor.will/wise/wise-compute-features/applications/cp2k:3": {},
     "harbor.will/wise/wise-compute-features/applications/wannier90:1": {},
     "harbor.will/wise/wise-compute-features/applications/packmol:1": {}
   }

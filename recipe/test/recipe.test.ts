@@ -135,7 +135,7 @@ test("only the CUDA delivery requests GPU builds", () => {
     item.options?.variant === "cuda" || Boolean(item.options?.cudaCC) || Boolean(item.options?.gpuVersion);
   const gpu = (variant: string) => resolved[variant].filter(requestsGpu).map(item => item.id).sort();
   assert.deepEqual(gpu("cpu"), []);
-  assert.deepEqual(gpu("cuda"), ["cp2k", "lammps", "quantum-espresso"]);
+  assert.deepEqual(gpu("cuda"), ["cp2k-toolchain", "lammps", "quantum-espresso"]);
 });
 
 // lammps/install.sh is the single list of downloading packages and of the Features backing packages.
@@ -278,9 +278,9 @@ function unmet(order: Resolved[], mpiFromBase?: string): string[] {
 test("each delivery meets every declared requirement, in install order", () => {
   for (const [variant, order] of Object.entries(resolved)) assert.deepEqual(unmet(order, baseMpi[variant]), [], variant);
   // The check itself.
-  const cp2k = { id: "cp2k", options: { elpa: true, hdf5: false } };
+  const espresso = { id: "quantum-espresso", options: { elpa: true, hdf5: false } };
   assert.deepEqual(unmet([{ id: "core", options: {} }, { id: "openmpi", options: {} }, { id: "fftw", options: {} },
-    { id: "scalapack", options: {} }, cp2k]).filter(line => line.startsWith("cp2k")), ["cp2k.elpa needs elpa"]);
+    { id: "scalapack", options: {} }, espresso]).filter(line => line.startsWith("quantum")), ["quantum-espresso.elpa needs elpa"]);
   assert.ok(unmet([{ id: "mpich", options: {} }, { id: "openmpi", options: {} }, { id: "fftw", options: {} }])
     .includes("fftw needs exactly one mpi provider before it"));
   assert.ok(unmet([{ id: "hdf5", options: {} }, { id: "netcdf", options: {} }]).includes("hdf5 needs exactly one mpi provider before it"));
