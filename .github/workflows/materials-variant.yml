@@ -66,9 +66,18 @@ jobs:
       goal: '6'
     secrets: inherit
 
+  stage7:
+    name: Open MPI defaults
+    needs: stage6
+    uses: ./.github/workflows/materials-stage.yml
+    with:
+      variant: ${{ inputs.variant }}
+      goal: '7'
+    secrets: inherit
+
   release:
     name: verify and publish
-    needs: stage6
+    needs: stage7
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}

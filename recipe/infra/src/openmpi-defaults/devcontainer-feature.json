@@ -1,0 +1,16 @@
+{
+  "id": "openmpi-defaults",
+  "version": "1.0.0",
+  "name": "Open MPI defaults",
+  "description": "Lets Open MPI choose its point-to-point layer: UCX on supported devices, otherwise shared memory and TCP.",
+  "containerEnv": {
+    "OMPI_MCA_pml": ""
+  },
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:2": {}
+  },
+  "installsAfter": [
+    "harbor.will/wise/wise-compute-features/infra/openmpi:2",
+    "harbor.will/wise/wise-compute-features/infra/mpich:2"
+  ]
+}

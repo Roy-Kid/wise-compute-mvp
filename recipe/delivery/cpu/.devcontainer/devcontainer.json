@@ -28,6 +28,7 @@
     "harbor.will/wise/wise-compute-features/applications/cp2k-integrals:1": {},
     "harbor.will/wise/wise-compute-features/applications/cp2k-toolchain:1": { "elpa": true, "hdf5": true, "largeSystems": true },
     "harbor.will/wise/wise-compute-features/applications/cp2k:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmpi-defaults:1": {},
     "harbor.will/wise/wise-compute-features/applications/wannier90:1": {},
     "harbor.will/wise/wise-compute-features/applications/packmol:1": {}
   }
