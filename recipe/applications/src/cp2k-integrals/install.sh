@@ -20,6 +20,8 @@ mkdir -p "$deps"
 cp -R "$work/src/tools/toolchain/." "$deps/"
 mpi=$(wise_provider mpi)
 gcc=system
+# Without DBCSR its step filters an empty file, and grep's "no lines" status would end the toolchain.
+sed -i '/^  grep -v .*"$source_file" >> "$target_file"$/s/$/ || :/' "$deps/scripts/tool_kit.sh"
 # The toolchain's own -mtune=<target-cpu> leaves the instruction set at plain x86-64.
 sed -i 's/-mtune=${TARGET_CPU}/-march=x86-64-v3 -mtune=generic/' "$deps/scripts/stage0/setup_buildtools.sh"
 if wise_cuda; then
