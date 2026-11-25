@@ -1,3 +1,4 @@
+import { mkdir } from "node:fs/promises";
 import { CommandError, checked, run } from "./process.ts";
 import type { Run } from "./process.ts";
 import { digestPattern, platformMatches } from "./reference.ts";
@@ -93,6 +94,17 @@ export class Docker {
 
   async removeImage(reference: string): Promise<void> {
     await this.exec(["image", "rm", reference]);
+  }
+
+  /** Copies a path out of a local image into a directory, created when missing. */
+  async copyOut(image: string, path: string, target: string): Promise<void> {
+    const container = (await this.exec(["container", "create", image, "true"])).trim();
+    try {
+      await mkdir(target, { recursive: true });
+      await this.exec(["container", "cp", `${container}:${path}`, target]);
+    } finally {
+      await this.exec(["container", "rm", container]);
+    }
   }
 
   /** Pushes one platform of a tagged image and returns the manifest digest Docker reports. */

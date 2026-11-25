@@ -7,7 +7,7 @@ import { delimiter, join } from "node:path";
 import { test } from "node:test";
 import { devcontainerCli } from "../../cli/src/devcontainer.ts";
 import { parseFeatureReference, publishOrder, readStack, stageLocalFeatures } from "../../cli/src/features.ts";
-import { laterStages, prepareStage, stageCount, stageFeatures, stageTags } from "../delivery/stages.ts";
+import { laterStages, lammpsStage, partCount, partTags, prepareStage, stageCount, stageFeatures, stageTags } from "../delivery/stages.ts";
 
 const recipe = join(import.meta.dirname, "..");
 const featureTiers = ["infra", "toolchains", "applications", "providers"] as const;
@@ -305,6 +305,24 @@ test("the CI stages install the delivery exactly once, with every requirement me
     assert.deepEqual(tags, stageTags(variant), "tags depend on content only");
     for (const tag of tags) assert.match(tag, /^build-(cpu|cuda)-\d-[0-9a-f]{16}$/);
   }
+});
+
+test("the CUDA build compiles LAMMPS in parts, one CI job each", () => {
+  const count = partCount("cuda", lammpsStage);
+  for (let stage = 1; stage <= stageCount; stage++) assert.equal(partCount("cpu", stage), 0);
+  assert.deepEqual(partTags("cpu", lammpsStage), []);
+  assert.equal(new Set(partTags("cuda", lammpsStage)).size, count);
+  const workflow = readFileSync(join(recipe, "..", ".github", "workflows", "materials-variant.yml"), "utf8");
+  assert.ok(workflow.includes(`part: [${Array.from({ length: count }, (_, index) => index + 1).join(", ")}]`));
+  assert.ok(workflow.includes(`goal: ${lammpsStage}.\${{ matrix.part }}`));
+  const stage = prepareStage("cuda", lammpsStage, "wise-compute:previous", count);
+  try {
+    const options = installOrder(stage.workspace, stage.config, stage.stack).map(item => item.options);
+    assert.deepEqual(options.map(item => [item.variant, item.part]), [["cuda", `${count}/${count}`]]);
+  } finally {
+    stage.cleanup();
+  }
+  for (const part of [0, count + 1]) assert.throws(() => prepareStage("cuda", lammpsStage, "wise-compute:previous", part), /no part/);
 });
 
 test("the Feature SDK retries a failing command and then gives up", () => {

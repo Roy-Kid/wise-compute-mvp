@@ -11,6 +11,7 @@ member() { case " $2 " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 variant=${VARIANT:-cpu}
 arch=${GPUARCH:-AMPERE80}
 potentials=${POTENTIALS:-bundled}
+part=${PART:-}
 extra=$(list "${EXTRAPACKAGES:-}")
 disable=$(list "${DISABLEPACKAGES:-}")
 case "$variant" in
@@ -18,6 +19,11 @@ case "$variant" in
     cuda) wise_cuda || wise_fail "variant=cuda needs the CUDA base image" ;;
     *) wise_fail "unknown variant $variant" ;;
 esac
+[ -z "$part" ] || [ "$variant" = cuda ] || wise_fail "part needs variant=cuda"
+if [ -n "$part" ]; then
+    echo "$part" | grep -qx '[1-9][0-9]*/[1-9][0-9]*' || wise_fail "part is K/N, not $part"
+    [ "${part%/*}" -le "${part#*/}" ] || wise_fail "there is no part $part"
+fi
 case "$potentials" in none|bundled|all) ;; *) wise_fail "unknown potentials mode $potentials" ;; esac
 ! member KSPACE "$disable" || wise_fail "KSPACE is required and cannot be disabled"
 for package in KOKKOS GPU; do
@@ -60,23 +66,44 @@ for package in $downloading $off; do member "$package" "$extra" || set -- "$@" -
 for package in $extra; do set -- "$@" -DPKG_"$package"=ON; done
 for package in $disable; do set -- "$@" -DPKG_"$package"=OFF; done
 if [ "$variant" = cuda ]; then
-    # nvcc_wrapper hands every file to nvcc, which takes hours and crashes on some (PTM). Files that include no Kokkos
-    # header go to the host compiler; fmt must then avoid __int128, as under nvcc, so that its types stay the same.
+    # While LAMMPS_SRC is set, i.e. after configuring, nvcc_wrapper does two more things:
+    # - Objects found in LAMMPS_OBJECTS are copied, not compiled. With LAMMPS_PART=K/N only that part is compiled, and
+    #   saved there; the other objects become placeholders and nothing is linked. One machine needs many hours for all.
+    # - Files that include no Kokkos header go to the host compiler: nvcc takes far longer and crashes on some (PTM).
+    #   fmt must then avoid __int128, as under nvcc, so that its types stay the same.
+    # Dependency files are of no use to a single build and cost a second nvcc run.
     mkdir "$WISE_WORK/bin"
-    cat > "$WISE_WORK/host-only" <<EOF
-case "\$compile_arg:\$cpp_files" in
-"-c: $src/src/"*)
-  if deps=\$(\$host_compiler \$shared_args \${xcompiler_args//,/ } -M \$cpp_files 2>/dev/null) && [[ \$deps != */lib/kokkos/* ]]; then
-    host_only=1
-    shared_args="\$shared_args -DFMT_USE_INT128=0"
+    cat > "$WISE_WORK/wrapper" <<'EOF'
+if [[ -n ${LAMMPS_SRC:-} ]]; then
+  output=${output_arg# -o }
+  if [[ -z $compile_arg ]]; then
+    if [[ -n $LAMMPS_PART ]]; then : > "$output"; exit; fi
+  elif [[ $cpp_files == " $LAMMPS_SRC/"* || $cpp_files == " $LAMMPS_BUILD/styles/"* ]]; then
+    # CMake puts the source's full path into the object's, and the source is in a random directory.
+    object=${PWD#"$LAMMPS_BUILD"}/${output/"$LAMMPS_SRC"/}
+    object=${object//\//%}
+    if [[ -f $LAMMPS_OBJECTS/$object ]]; then exec cp "$LAMMPS_OBJECTS/$object" "$output"; fi
+    if [[ -n $LAMMPS_PART ]]; then
+      number=$(cksum <<< "$object")
+      if (( ${number%% *} % ${LAMMPS_PART#*/} != ${LAMMPS_PART%/*} - 1 )); then
+        exec $host_compiler -x c++ -c /dev/null -o "$output"
+      fi
+      trap '[[ $error_code -ne 0 ]] || cp "$output" "$LAMMPS_OBJECTS/$object"' EXIT
+    fi
+    depfile_separate=0
+    if [[ $cpp_files == " $LAMMPS_SRC/src/"* ]] && deps=$($host_compiler $shared_args ${xcompiler_args//,/ } -M $cpp_files 2>/dev/null) \
+      && [[ $deps != */lib/kokkos/* ]]; then
+      host_only=1
+      host_only_args=
+      shared_args="$shared_args -DFMT_USE_INT128=0"
+    fi
   fi
-  ;;
-esac
+fi
 
 EOF
-    sed "/^#Compose compilation command/r $WISE_WORK/host-only" "$src/lib/kokkos/bin/nvcc_wrapper" \
+    sed "/^#Compose compilation command/r $WISE_WORK/wrapper" "$src/lib/kokkos/bin/nvcc_wrapper" \
         > "$WISE_WORK/bin/nvcc_wrapper"
-    grep -q FMT_USE_INT128 "$WISE_WORK/bin/nvcc_wrapper" || wise_fail "nvcc_wrapper has changed"
+    grep -q LAMMPS_OBJECTS "$WISE_WORK/bin/nvcc_wrapper" || wise_fail "nvcc_wrapper has changed"
     chmod +x "$WISE_WORK/bin/nvcc_wrapper"
     # KOKKOS with the CUDA backend (OpenMP on the host); its FFTs run on cuFFT from the HPC SDK math_libs.
     # INTEL relies on host compiler flags nvcc does not accept.
@@ -109,7 +136,13 @@ done
 downloads=$(sed -n 's/^\(DOWNLOAD_[A-Z0-9_]*\):BOOL=\(ON\|YES\|TRUE\|1\)$/\1/p' "$cache" | grep -vx DOWNLOAD_POTENTIALS | tr '\n' ' ' || true)
 [ -z "$downloads" ] || wise_fail "LAMMPS would download third-party code ($downloads); add its package to the downloading list or provide it through a Feature"
 
-cmake --build "$build" -j"$(nproc)"
+objects=$PWD/objects
+if [ -n "$part" ]; then
+    objects=$WISE_PREFIX/share/wise/lammps-objects
+    mkdir -p "$objects"
+fi
+LAMMPS_SRC=$src LAMMPS_BUILD=$build LAMMPS_OBJECTS=$objects LAMMPS_PART=$part cmake --build "$build" -j"$(nproc)"
+[ -z "$part" ] || exit 0
 cmake --install "$build" --strip
 ldconfig
 [ "$potentials" != none ] || rm -rf "$WISE_PREFIX/share/lammps/potentials"

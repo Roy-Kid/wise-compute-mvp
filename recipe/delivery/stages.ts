@@ -12,6 +12,14 @@ import { parseFeatureReference, readStack } from "../../cli/src/features.ts";
 export const laterStages = [["elpa"], ["lammps"], ["quantum-espresso"], ["cp2k-integrals"], ["cp2k-toolchain"], ["cp2k"]];
 export const stageCount = laterStages.length + 1;
 
+/** LAMMPS with CUDA takes longer than a CI job may run, so jobs of their own compile its objects in this many parts. */
+const lammpsParts = 8;
+export const lammpsObjects = "/opt/wise/share/wise/lammps-objects";
+export const lammpsStage = laterStages.findIndex(ids => ids.includes("lammps")) + 2;
+export function partCount(variant: string, stage: number): number {
+  return variant === "cuda" && stage === lammpsStage ? lammpsParts : 0;
+}
+
 const recipe = join(import.meta.dirname, "..");
 type Features = Record<string, Record<string, unknown>>;
 type Config = { features: Features } & Record<string, unknown>;
@@ -62,6 +70,12 @@ export function stageTags(variant: string): string[] {
   });
 }
 
+/** Image tags of the parts of a stage; none for a stage built in one go. */
+export function partTags(variant: string, stage: number): string[] {
+  const count = partCount(variant, stage);
+  return Array.from({ length: count }, (_, index) => `${stageTags(variant)[stage - 1]}-part-${index + 1}-of-${count}`);
+}
+
 export interface StageBuild {
   workspace: string;
   config: string;
@@ -70,9 +84,13 @@ export interface StageBuild {
   cleanup: () => void;
 }
 
-/** Writes what `devcontainer build` needs for one stage (from 1); later stages build on `previousImage`. */
-export function prepareStage(variant: string, stage: number, previousImage?: string): StageBuild {
-  const features = stageFeatures(variant)[stage - 1];
+/** Writes what `devcontainer build` needs for one stage (from 1), or a part of it; later stages build on `previousImage`. */
+export function prepareStage(variant: string, stage: number, previousImage?: string, part?: number): StageBuild {
+  const selected = stageFeatures(variant)[stage - 1];
+  const count = partCount(variant, stage);
+  if (part !== undefined && !(part >= 1 && part <= count)) throw new Error(`Stage ${stage} of ${variant} has no part ${part}`);
+  const features = part === undefined ? selected : Object.fromEntries(Object.entries(selected).map(([reference, options]) =>
+    [reference, parseFeatureReference(reference).id === "lammps" ? { ...options, part: `${part}/${count}` } : options]));
   const delivery = join(recipe, "delivery", variant);
   if (stage === 1) {
     // Next to the delivery's own file, which names the Dockerfile by a relative path.

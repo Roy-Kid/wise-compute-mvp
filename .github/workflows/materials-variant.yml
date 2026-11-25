@@ -30,9 +30,25 @@ jobs:
       goal: '2'
     secrets: inherit
 
+  lammps:
+    name: LAMMPS part
+    needs: stage2
+    # Skipped for cpu; the jobs after it must then say that this is no failure.
+    if: inputs.variant == 'cuda'
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2, 3, 4, 5, 6, 7, 8]
+    uses: ./.github/workflows/materials-stage.yml
+    with:
+      variant: ${{ inputs.variant }}
+      goal: 3.${{ matrix.part }}
+    secrets: inherit
+
   stage3:
     name: LAMMPS
-    needs: stage2
+    needs: [stage2, lammps]
+    if: ${{ !failure() && !cancelled() }}
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}
@@ -42,6 +58,7 @@ jobs:
   stage4:
     name: Quantum ESPRESSO
     needs: stage3
+    if: ${{ !failure() && !cancelled() }}
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}
@@ -51,6 +68,7 @@ jobs:
   stage5:
     name: libint and libxc
     needs: stage4
+    if: ${{ !failure() && !cancelled() }}
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}
@@ -60,6 +78,7 @@ jobs:
   stage6:
     name: CP2K libraries
     needs: stage5
+    if: ${{ !failure() && !cancelled() }}
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}
@@ -69,6 +88,7 @@ jobs:
   stage7:
     name: CP2K
     needs: stage6
+    if: ${{ !failure() && !cancelled() }}
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}
@@ -78,6 +98,7 @@ jobs:
   release:
     name: verify and publish
     needs: stage7
+    if: ${{ !failure() && !cancelled() }}
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}
