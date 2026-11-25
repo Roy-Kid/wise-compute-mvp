@@ -95,9 +95,19 @@ jobs:
       goal: '7'
     secrets: inherit
 
+  stage8:
+    name: Open MPI defaults
+    needs: stage7
+    if: ${{ !failure() && !cancelled() }}
+    uses: ./.github/workflows/materials-stage.yml
+    with:
+      variant: ${{ inputs.variant }}
+      goal: '8'
+    secrets: inherit
+
   release:
     name: verify and publish
-    needs: stage7
+    needs: stage8
     if: ${{ !failure() && !cancelled() }}
     uses: ./.github/workflows/materials-stage.yml
     with:
