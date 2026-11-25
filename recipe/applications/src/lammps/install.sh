@@ -60,11 +60,29 @@ for package in $downloading $off; do member "$package" "$extra" || set -- "$@" -
 for package in $extra; do set -- "$@" -DPKG_"$package"=ON; done
 for package in $disable; do set -- "$@" -DPKG_"$package"=OFF; done
 if [ "$variant" = cuda ]; then
+    # nvcc_wrapper hands every file to nvcc, which takes hours and crashes on some (PTM). Files that include no Kokkos
+    # header go to the host compiler; fmt must then avoid __int128, as under nvcc, so that its types stay the same.
+    mkdir "$WISE_WORK/bin"
+    cat > "$WISE_WORK/host-only" <<EOF
+case "\$compile_arg:\$cpp_files" in
+"-c: $src/src/"*)
+  if deps=\$(\$host_compiler \$shared_args \${xcompiler_args//,/ } -M \$cpp_files 2>/dev/null) && [[ \$deps != */lib/kokkos/* ]]; then
+    host_only=1
+    shared_args="\$shared_args -DFMT_USE_INT128=0"
+  fi
+  ;;
+esac
+
+EOF
+    sed "/^#Compose compilation command/r $WISE_WORK/host-only" "$src/lib/kokkos/bin/nvcc_wrapper" \
+        > "$WISE_WORK/bin/nvcc_wrapper"
+    grep -q FMT_USE_INT128 "$WISE_WORK/bin/nvcc_wrapper" || wise_fail "nvcc_wrapper has changed"
+    chmod +x "$WISE_WORK/bin/nvcc_wrapper"
     # KOKKOS with the CUDA backend (OpenMP on the host); its FFTs run on cuFFT from the HPC SDK math_libs.
-    # nvcc_wrapper compiles every package; INTEL relies on host compiler flags nvcc does not accept.
+    # INTEL relies on host compiler flags nvcc does not accept.
     set -- "$@" -DPKG_KOKKOS=ON -DKokkos_ENABLE_CUDA=ON -DKokkos_ENABLE_OPENMP=ON -DKokkos_ARCH_"$arch"=ON \
         -DFFT_KOKKOS=CUFFT -DCUDAToolkit_ROOT="$CUDA_HOME" -DCMAKE_PREFIX_PATH="${NVHPC_ROOT:?}/math_libs;$WISE_PREFIX" \
-        -DCMAKE_CXX_COMPILER="$src/lib/kokkos/bin/nvcc_wrapper" -DPKG_INTEL=OFF
+        -DCMAKE_CXX_COMPILER="$WISE_WORK/bin/nvcc_wrapper" -DPKG_INTEL=OFF
 else
     set -- "$@" -DPKG_KOKKOS=OFF -DCMAKE_PREFIX_PATH="$WISE_PREFIX"
 fi
