@@ -1,6 +1,6 @@
 {
   "id": "cp2k",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "name": "CP2K",
   "description": "Builds CP2K 2026.2 on the libraries and choices of the cp2k-toolchain Feature. The CUDA base uses NVHPC to match the SDK MPI Fortran modules.",
   "options": {

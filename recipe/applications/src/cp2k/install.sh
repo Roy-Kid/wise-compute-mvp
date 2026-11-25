@@ -44,7 +44,8 @@ set -f
 # shellcheck disable=SC2086
 set -- "$@" ${CMAKEARGS:-}
 set +f
-bash -c '. "$1/install/setup" && shift && cmake "$@"' sh "$deps" -S "$work/src" -B "$work/build" "$@"
+# SIRIUS's package looks for libfftw3_mpi without a hint.
+CMAKE_LIBRARY_PATH="$WISE_PREFIX/lib" bash -c '. "$1/install/setup" && shift && cmake "$@"' sh "$deps" -S "$work/src" -B "$work/build" "$@"
 cache=$work/build/CMakeCache.txt
 # The toolchain links COSMA and SIRIUS statically, and CMake silently drops an option whose dependency is
 # off: check what will actually be built.

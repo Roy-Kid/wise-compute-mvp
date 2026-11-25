@@ -5,6 +5,7 @@ wise_id=cp2k-toolchain
 
 wise_provide cp2k-toolchain
 wise_require_capability mpi
+wise_require_capability cp2k-integrals
 wise_require fftw
 wise_require scalapack
 gpu=${GPUVERSION:-}
@@ -17,33 +18,19 @@ wise_require_if "$elpa" elpa "elpa=true"
 wise_require_if "$hdf5" hdf5 "hdf5=true"
 wise_require_if "$large" hdf5 "largeSystems=true (SIRIUS)"
 [ "$large" != true ] || [ "$hdf5" = true ] || wise_fail "largeSystems=true needs hdf5=true (SIRIUS)"
-wise_apt wget unzip
-wise_workdir
-work=$WISE_WORK
-commit=67b5da876dd6a76b8b021d5a04d1c81ba79a4c50
-wise_fetch_git https://github.com/cp2k/cp2k.git "$commit" "$work/src"
-
-# CP2K's toolchain builds the CP2K-specific libraries (each download checksum-verified by the toolchain)
-# and finds MPI, FFTW, ScaLAPACK, OpenBLAS, ELPA and HDF5 from the infra tier. Its install tree stays in the
-# image.
 deps=$WISE_PREFIX/cp2k-deps
-mkdir -p "$deps"
-cp -R "$work/src/tools/toolchain/." "$deps/"
 mpi=$(wise_provider mpi)
 gcc=system
-# The toolchain's own -mtune=<target-cpu> leaves the instruction set at plain x86-64.
-sed -i 's/-mtune=${TARGET_CPU}/-march=x86-64-v3 -mtune=generic/' "$deps/scripts/stage0/setup_buildtools.sh"
-sed -i 's/-mtune=native/-mtune=generic/g' "$deps/scripts/stage8/install_sirius.sh"
+
+# The toolchain finds MPI, FFTW, ScaLAPACK, OpenBLAS, ELPA and HDF5 from the infra tier, and libint and libxc where
+# the cp2k-integrals Feature left them. Its install tree stays in the image.
+sed -i 's/-mtune=native/-mtune=generic/g; s/-DSIRIUS_USE_PUGIXML=ON/& -DSIRIUS_BUILD_APPS=OFF/' "$deps/scripts/stage8/install_sirius.sh"
 if wise_cuda; then
     wise_nvfortran_env
     # The static libraries end up in the shared libcp2k.
     for flags in CFLAGS CXXFLAGS FFLAGS FCFLAGS F77FLAGS F90FLAGS; do eval "export $flags=\"\$$flags -fPIC\""; done
     gcc=no
-    # Keep the exported NVHPC flags instead of the GNU defaults in the pinned toolchain.
-    sed -i '/^# Setup compiler flags/,/^export LDFLAGS=/c\export LDFLAGS="${TSANFLAGS}"' \
-        "$deps/scripts/stage0/setup_buildtools.sh"
     sed -i 's/-mtune=generic -ftree-loop-vectorize/-tp=haswell/g' "$deps/scripts/stage8/install_sirius.sh"
-    sed -i 's/ -g1"/ -g"/g' "$deps/scripts/stage3/install_libint.sh"
     sed -i 's/ -fpermissive"/"/' "$deps/scripts/stage7/install_libvdwxc.sh"
 fi
 if [ -n "$gpu" ]; then
@@ -69,13 +56,12 @@ set -- --target-cpu=haswell --with-gcc="$gcc" --with-cmake=system --with-"$mpi"=
     --with-sirius="$(pick "$large" install)" --with-gsl="$(pick "$large" install)" \
     --with-spglib="$(pick "$large" install)" --with-libvori="$(pick "$large" install)"
 [ -z "$gpu" ] || set -- "$@" --enable-cuda --gpu-ver="$gpu"
-# The toolchain downloads with wget, which gives up on HTTP errors and refused connections.
-printf '%s\n' 'tries = 5' 'waitretry = 30' 'timeout = 60' 'retry_connrefused = on' \
-    'retry_on_http_error = 429,500,502,503,504' > "$work/wgetrc"
-(cd "$deps" && WGETRC="$work/wgetrc" CPATH="$WISE_PREFIX/include" LIBRARY_PATH="$WISE_PREFIX/lib" \
+# SIRIUS looks for libfftw3_mpi without a hint.
+(cd "$deps" && WGETRC="$deps/wgetrc" CPATH="$WISE_PREFIX/include" LIBRARY_PATH="$WISE_PREFIX/lib" \
+    CMAKE_LIBRARY_PATH="$WISE_PREFIX/lib" \
     ./install_cp2k_toolchain.sh -j "$(nproc)" "$@")
 rm -rf "$deps/build"
 find "$deps/install" -maxdepth 2 -type d \( -name lib -o -name lib64 \) > /etc/ld.so.conf.d/wise-cp2k.conf
-# The cp2k Feature builds this commit with these choices.
-printf '%s\n' "commit=$commit" "gpu='$gpu'" "elpa=$elpa" "hdf5=$hdf5" "large=$large" > "$deps/wise.env"
+# The cp2k Feature follows these choices.
+printf '%s\n' "gpu='$gpu'" "elpa=$elpa" "hdf5=$hdf5" "large=$large" >> "$deps/wise.env"
 wise_done

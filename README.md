@@ -18,7 +18,7 @@ npx wisehub image build --workspace-folder recipe/delivery/cpu --local-features 
 
 ## CI/CD
 
-在 GitHub Actions 手动运行 [Publish materials full CPU and CUDA](.github/workflows/materials-full.yml)，CPU 和 CUDA 的 `linux/amd64` 完整镜像会并行构建。每个镜像分六段依次构建（[stages.ts](recipe/delivery/stages.ts)），每段在单独的任务中完成并推送到 `ghcr.io/<owner>/<repo>/build`，标签是该段全部输入的哈希，后续运行从第一个有改动的段继续。每个镜像独立完成离线验收后推送到 Docker Hub，标签为 `materials-full-<cpu|cuda>-<version>`，版本取自 [发布配方](recipe/delivery/cpu/lavas-release.json)。运行摘要记录各镜像的 digest。CUDA 真机验收需在 GPU 节点执行。
+在 GitHub Actions 手动运行 [Publish materials full CPU and CUDA](.github/workflows/materials-full.yml)，CPU 和 CUDA 的 `linux/amd64` 完整镜像会并行构建。每个镜像分七段依次构建（[stages.ts](recipe/delivery/stages.ts)），每段在单独的任务中完成并推送到 `ghcr.io/<owner>/<repo>/build`，标签是该段全部输入的哈希，后续运行从第一个有改动的段继续。每个镜像独立完成离线验收后推送到 Docker Hub，标签为 `materials-full-<cpu|cuda>-<version>`，版本取自 [发布配方](recipe/delivery/cpu/lavas-release.json)。运行摘要记录各镜像的 digest。CUDA 真机验收需在 GPU 节点执行。
 
 在 GitHub Actions 仓库变量中设置 `DOCKERHUB_REPOSITORY`（`namespace/repository`）和 `DOCKERHUB_USERNAME`，将可读写目标仓库的 PAT 保存为 Actions secret `DOCKERHUB_TOKEN`。任务默认使用 `ubuntu-24.04`。可分别用 `CPU_BUILD_RUNNER` 和 `CUDA_BUILD_RUNNER` 指定已配置的 x64 Linux runner 标签。
 

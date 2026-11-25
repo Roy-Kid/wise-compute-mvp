@@ -26,6 +26,7 @@
     // H100 code (sm_90), Kokkos and CP2K embed sm_80 PTX that newer GPUs JIT-compile.
     "harbor.will/wise/wise-compute-features/applications/lammps:2": { "variant": "cuda", "gpuArch": "AMPERE80", "extraPackages": "H5MD,NETCDF" },
     "harbor.will/wise/wise-compute-features/applications/quantum-espresso:2": { "cudaCC": "80,90", "elpa": true, "hdf5": true },
+    "harbor.will/wise/wise-compute-features/applications/cp2k-integrals:1": {},
     "harbor.will/wise/wise-compute-features/applications/cp2k-toolchain:1": { "gpuVersion": "A100", "elpa": true, "hdf5": true, "largeSystems": true },
     "harbor.will/wise/wise-compute-features/applications/cp2k:3": {},
     "harbor.will/wise/wise-compute-features/applications/wannier90:1": {},

@@ -42,6 +42,7 @@
     "harbor.will/wise/wise-compute-features/infra/openmpi:2",
     "harbor.will/wise/wise-compute-features/infra/mpich:2",
     "harbor.will/wise/wise-compute-features/infra/elpa:1",
-    "harbor.will/wise/wise-compute-features/infra/hdf5:1"
+    "harbor.will/wise/wise-compute-features/infra/hdf5:1",
+    "harbor.will/wise/wise-compute-features/applications/cp2k-integrals:1"
   ]
 }
