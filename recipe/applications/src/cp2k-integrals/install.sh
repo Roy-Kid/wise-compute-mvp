@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 wise_id=cp2k-integrals
-. /opt/wise/lib/wise/feature.sh
+. /usr/local/lib/devcontainer-features/feature.sh
 
 wise_provide cp2k-integrals
 wise_require_capability mpi

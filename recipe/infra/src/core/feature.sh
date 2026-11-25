@@ -1,14 +1,14 @@
 # WiseHub Feature SDK. Every Feature's install.sh starts with
 #   wise_id=<id>
-#   . /opt/wise/lib/wise/feature.sh
+#   . /usr/local/lib/devcontainer-features/feature.sh
 # and ends with wise_done. Features learn about each other only through the registry below, by id or by
 # capability, never by probing another Feature's files; their requirements are the wise_require* calls,
 # which recipe/test/recipe.test.ts reads to check dependsOn/installsAfter and every delivery.
 # shellcheck shell=sh
 
-WISE_PREFIX=/opt/wise
+WISE_PREFIX=/usr/local
 WISE_MPI_ROOT=${WISE_MPI_ROOT:-$WISE_PREFIX}
-WISE_REGISTRY=$WISE_PREFIX/share/wise/features
+WISE_REGISTRY=$WISE_PREFIX/share/devcontainer-features
 : "${wise_id:?set wise_id before sourcing feature.sh}"
 
 wise_fail() { echo "$wise_id: $*" >&2; exit 1; }

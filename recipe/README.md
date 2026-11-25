@@ -9,7 +9,7 @@
 | [providers](providers/src) | 按服务器供应商选用的 SDK Feature。[`aliyun`](providers/src/aliyun) 目前只登记 Feature。 |
 | [delivery](delivery) | CPU/CUDA Dev Container 配置、验收和基准脚本。 |
 
-供应商 Feature 由交付配置的 `features` 显式选用。阿里云占位项的发布引用为 `harbor.will/wise/wise-compute-features/providers/aliyun:0`。
+供应商 Feature 由交付配置的 `features` 显式选用。阿里云占位项的发布引用为 `harbor.will/wise/wise-compute-features/providers/aliyun:1`。
 
 ## 编写 Feature
 
@@ -19,7 +19,7 @@
 #!/bin/sh
 set -eu
 wise_id=example
-. /opt/wise/lib/wise/feature.sh
+. /usr/local/lib/devcontainer-features/feature.sh
 wise_require_capability mpi
 wise_require fftw
 wise_require_if "${ELPA:-false}" elpa

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 wise_id=scalapack
-. /opt/wise/lib/wise/feature.sh
+. /usr/local/lib/devcontainer-features/feature.sh
 
 wise_require_capability mpi
 wise_require linear-algebra

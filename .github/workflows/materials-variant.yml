@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   stage1:
@@ -19,7 +18,6 @@ jobs:
     with:
       variant: ${{ inputs.variant }}
       goal: '1'
-    secrets: inherit
 
   stage2:
     name: ELPA
@@ -28,7 +26,7 @@ jobs:
     with:
       variant: ${{ inputs.variant }}
       goal: '2'
-    secrets: inherit
+      previous: 1
 
   lammps:
     name: LAMMPS part
@@ -43,74 +41,75 @@ jobs:
     with:
       variant: ${{ inputs.variant }}
       goal: 3.${{ matrix.part }}
-    secrets: inherit
+      previous: 2
 
   stage3:
     name: LAMMPS
     needs: [stage2, lammps]
-    if: ${{ !failure() && !cancelled() }}
+    if: ${{ !cancelled() && needs.stage2.result == 'success' && (inputs.variant == 'cpu' || needs.lammps.result == 'success') }}
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}
       goal: '3'
-    secrets: inherit
+      previous: 2
 
   stage4:
     name: Quantum ESPRESSO
     needs: stage3
-    if: ${{ !failure() && !cancelled() }}
+    if: ${{ !cancelled() && needs.stage3.result == 'success' }}
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}
       goal: '4'
-    secrets: inherit
+      previous: 3
 
   stage5:
     name: libint and libxc
     needs: stage4
-    if: ${{ !failure() && !cancelled() }}
+    if: ${{ !cancelled() && needs.stage4.result == 'success' }}
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}
       goal: '5'
-    secrets: inherit
+      previous: 4
 
   stage6:
     name: CP2K libraries
     needs: stage5
-    if: ${{ !failure() && !cancelled() }}
+    if: ${{ !cancelled() && needs.stage5.result == 'success' }}
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}
       goal: '6'
-    secrets: inherit
+      previous: 5
 
   stage7:
     name: CP2K
     needs: stage6
-    if: ${{ !failure() && !cancelled() }}
+    if: ${{ !cancelled() && needs.stage6.result == 'success' }}
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}
       goal: '7'
-    secrets: inherit
+      previous: 6
 
   stage8:
     name: Open MPI defaults
     needs: stage7
-    if: ${{ !failure() && !cancelled() }}
+    if: ${{ !cancelled() && needs.stage7.result == 'success' }}
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}
       goal: '8'
-    secrets: inherit
+      previous: 7
 
   release:
     name: verify and publish
     needs: stage8
-    if: ${{ !failure() && !cancelled() }}
+    if: ${{ !cancelled() && needs.stage8.result == 'success' }}
     uses: ./.github/workflows/materials-stage.yml
     with:
       variant: ${{ inputs.variant }}
       goal: 'release'
+      previous: 8
     secrets: inherit

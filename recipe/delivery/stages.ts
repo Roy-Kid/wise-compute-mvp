@@ -1,10 +1,8 @@
-// A delivery compiles for longer than one hosted CI job may run, so it is built as a chain of images. Each stage
-// adds its Features to the image of the stage before, and its tag is a hash of everything that went into it: a
-// later run continues after the last unchanged stage.
-import { createHash } from "node:crypto";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+// A delivery compiles for longer than one hosted CI job may run. Each stage adds its Features
+// to the locally restored checkpoint of the previous stage.
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { dirname, join } from "node:path";
 import { parse } from "jsonc-parser";
 import { parseFeatureReference, readStack } from "../../cli/src/features.ts";
 
@@ -16,7 +14,7 @@ export const stageCount = laterStages.length + 1;
 
 /** LAMMPS with CUDA takes longer than a CI job may run, so jobs of their own compile its objects in this many parts. */
 const lammpsParts = 8;
-export const lammpsObjects = "/opt/wise/share/wise/lammps-objects";
+export const lammpsObjects = "/usr/local/share/lammps/build-objects";
 export const lammpsStage = laterStages.findIndex(ids => ids.includes("lammps")) + 2;
 export function partCount(variant: string, stage: number): number {
   return variant === "cuda" && stage === lammpsStage ? lammpsParts : 0;
@@ -39,43 +37,13 @@ function laterDependencies(later: Set<string>): Features {
 }
 
 /** The Features each stage asks for; every Feature of the delivery is in exactly one stage. */
-export function stageFeatures(variant: string): Features[] {
+function stageFeatures(variant: string): Features[] {
   const delivery = readDelivery(variant).features;
   const later = new Set(laterStages.flat());
   const entries = Object.entries({ ...laterDependencies(later), ...delivery });
   const pick = (wanted: (id: string) => boolean) =>
     Object.fromEntries(entries.filter(([reference]) => wanted(parseFeatureReference(reference).id)));
   return [pick(id => !later.has(id)), ...laterStages.map(ids => pick(id => ids.includes(id)))];
-}
-
-function hashTree(hash: ReturnType<typeof createHash>, root: string): void {
-  const files = readdirSync(root, { recursive: true, withFileTypes: true }).filter(entry => entry.isFile())
-    .map(entry => join(entry.parentPath, entry.name)).sort();
-  for (const file of files) {
-    const content = readFileSync(file);
-    hash.update(`${relative(root, file)}\0${content.length}\0`).update(content);
-  }
-}
-
-/** Image tags of the stages. A change rebuilds its own stage and the ones after it. */
-export function stageTags(variant: string): string[] {
-  const later = new Set(laterStages.flat());
-  const stack = readStack(recipe);
-  let previous = variant;
-  return stageFeatures(variant).map((features, index) => {
-    const hash = createHash("sha256").update(previous).update(JSON.stringify(features));
-    if (index === 0) hashTree(hash, join(recipe, "base", variant));
-    const own = stack.filter(feature => index === 0 ? !later.has(feature.id) : laterStages[index - 1].includes(feature.id));
-    for (const feature of own) hashTree(hash.update(`${feature.collection}/${feature.id}\0`), feature.dir);
-    previous = hash.digest("hex");
-    return `build-${variant}-${index + 1}-${previous.slice(0, 16)}`;
-  });
-}
-
-/** Image tags of the parts of a stage; none for a stage built in one go. */
-export function partTags(variant: string, stage: number): string[] {
-  const count = partCount(variant, stage);
-  return Array.from({ length: count }, (_, index) => `${stageTags(variant)[stage - 1]}-part-${index + 1}-of-${count}`);
 }
 
 export interface StageBuild {

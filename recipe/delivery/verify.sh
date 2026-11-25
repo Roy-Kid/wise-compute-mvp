@@ -11,7 +11,7 @@ variant=${1:?usage: verify.sh cpu|cuda}
 case "$variant" in cpu|cuda) ;; *) echo "unknown variant: $variant" >&2; exit 2 ;; esac
 : "${WISE_VENV:?WISE_VENV is missing; the python Feature is not installed}"
 wise_id=verify
-. /opt/wise/lib/wise/feature.sh
+. /usr/local/lib/devcontainer-features/feature.sh
 
 fail() { echo "verify: $*" >&2; exit 1; }
 # An empty entry in a search path means the current directory.
@@ -30,7 +30,7 @@ for component in pml:ucx osc:ucx; do
 done
 if [ "$variant" = cpu ]; then
     echo "$ompi" | grep -q '^mca:mtl:ofi:' || fail "Open MPI lacks OFI"
-    for module in ib rdmacm cma; do test -e "/opt/wise/lib/ucx/libuct_$module.so" || fail "UCX lacks $module"; done
+    for module in ib rdmacm cma; do test -e "/usr/local/lib/ucx/libuct_$module.so" || fail "UCX lacks $module"; done
     for provider in verbs shm tcp; do fi_info -l | grep -q "^$provider:" || fail "libfabric lacks $provider"; done
 else
     [ "${WISE_BASE_MPI:-}" = openmpi ] || fail "the CUDA base must supply Open MPI"
@@ -50,23 +50,23 @@ if [ "$cores" -lt 2 ]; then
 fi
 # Parallel I/O and solvers.
 [ "$(nc-config --has-parallel4)" = yes ] || fail "NetCDF-4 parallel I/O is off"
-grep -q 'define H5_HAVE_PARALLEL 1' /opt/wise/include/H5pubconf.h || fail "HDF5 is not parallel"
+grep -q 'define H5_HAVE_PARALLEL 1' /usr/local/include/H5pubconf.h || fail "HDF5 is not parallel"
 for lib in libfftw3 libfftw3f libfftw3_omp libfftw3f_omp libfftw3_mpi libfftw3f_mpi; do
-    test -e "/opt/wise/lib/$lib.so" || fail "FFTW lacks $lib"
+    test -e "/usr/local/lib/$lib.so" || fail "FFTW lacks $lib"
 done
-for lib in /opt/wise/lib/libelpa /opt/wise/lib/libhdf5 /opt/wise/lib/libscalapack; do
-    ldd /opt/wise/bin/pw.x | grep -q "$lib" || fail "pw.x does not link $lib"
+for lib in /usr/local/lib/libelpa /usr/local/lib/libhdf5 /usr/local/lib/libscalapack; do
+    ldd /usr/local/bin/pw.x | grep -q "$lib" || fail "pw.x does not link $lib"
 done
 for lib in libelpa_openmp libhdf5; do
-    ldd /opt/wise/bin/cp2k.psmp | grep -q "$lib" || fail "cp2k.psmp does not link $lib"
+    ldd /usr/local/bin/cp2k.psmp | grep -q "$lib" || fail "cp2k.psmp does not link $lib"
 done
 # One OpenMP runtime per process.
-for binary in /opt/wise/bin/lmp /opt/wise/bin/pw.x /opt/wise/bin/cp2k.psmp; do
+for binary in /usr/local/bin/lmp /usr/local/bin/pw.x /usr/local/bin/cp2k.psmp; do
     [ "$(ldd "$binary" | grep -c 'libgomp\|libnvomp')" -le 1 ] || fail "$binary loads two OpenMP runtimes"
 done
 
 # Every MPI consumer uses the selected provider's library and launcher.
-for binary in /opt/wise/bin/lmp /opt/wise/bin/pw.x /opt/wise/bin/cp2k.psmp \
+for binary in /usr/local/bin/lmp /usr/local/bin/pw.x /usr/local/bin/cp2k.psmp \
     "$(MPI4PY_RC_INITIALIZE=0 "$WISE_VENV/bin/python" -c 'import mpi4py.MPI as m; print(m.__file__)')"; do
     wise_mpi_linked "$binary"
 done
@@ -170,18 +170,18 @@ fi
 grep -q 'KOKKOS package API:.*CUDA' lammps-help.txt
 grep -q 'KOKKOS FFT library *= *CUFFT' lammps-help.txt
 ! grep -q 'GPU package API' lammps-help.txt || { echo "the native GPU package must not be built" >&2; exit 1; }
-ldd /opt/wise/bin/pw.x | grep -q libcufft
-! ldd /opt/wise/bin/pw.x | grep -q libgomp || fail "the GPU pw.x loads GCC's OpenMP runtime"
-ldd /opt/wise/bin/cp2k.psmp | grep -q libcudart
+ldd /usr/local/bin/pw.x | grep -q libcufft
+! ldd /usr/local/bin/pw.x | grep -q libgomp || fail "the GPU pw.x loads GCC's OpenMP runtime"
+ldd /usr/local/bin/cp2k.psmp | grep -q libcudart
 for feature in offload_cuda dbcsr_acc spla_gemm_offloading; do
     echo "$cp2k_version" | grep -qw "$feature" || fail "CP2K lacks $feature"
 done
 ! echo "$cp2k_version" | grep -q 'no_offload_' || fail "CP2K keeps a GPU path on the CPU"
 for lib in libcufft libcublas libcusolver; do
-    ldd /opt/wise/bin/cp2k.psmp | grep -q "$lib" || fail "cp2k.psmp does not link $lib"
+    ldd /usr/local/bin/cp2k.psmp | grep -q "$lib" || fail "cp2k.psmp does not link $lib"
 done
 for lib in libcublas libcusolver; do
-    ldd /opt/wise/lib/libelpa_openmp.so | grep -q "$lib" || fail "ELPA does not link $lib"
+    ldd /usr/local/lib/libelpa_openmp.so | grep -q "$lib" || fail "ELPA does not link $lib"
 done
 echo "$ompi" | grep -Eq '(^|:)mpi_built_with_cuda_support:value:true$' || fail "Open MPI is not CUDA-aware"
 [ "${WISE_VERIFY_GPU:-1}" = 1 ] || exit 0

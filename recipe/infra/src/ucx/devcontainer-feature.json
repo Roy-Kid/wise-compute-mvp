@@ -1,11 +1,11 @@
 {
   "id": "ucx",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "name": "UCX",
-  "description": "Builds UCX 1.21.1 into /opt/wise: InfiniBand/RoCE (verbs, rdmacm), shared memory with CMA and, on the CUDA base image, CUDA memory and GPUDirect RDMA through GDRCopy. Open MPI's point-to-point layer across nodes.",
+  "description": "Builds UCX 1.21.1 into /usr/local: InfiniBand/RoCE (verbs, rdmacm), shared memory with CMA and, on the CUDA base image, CUDA memory and GPUDirect RDMA through GDRCopy. Open MPI's point-to-point layer across nodes.",
   "dependsOn": {
-    "harbor.will/wise/wise-compute-features/infra/core:2": {},
-    "harbor.will/wise/wise-compute-features/infra/openmp:2": {},
-    "harbor.will/wise/wise-compute-features/infra/rdma:1": {}
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:3": {},
+    "harbor.will/wise/wise-compute-features/infra/rdma:2": {}
   }
 }

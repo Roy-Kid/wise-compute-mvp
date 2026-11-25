@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 wise_id=cp2k
-. /opt/wise/lib/wise/feature.sh
+. /usr/local/lib/devcontainer-features/feature.sh
 
 wise_require_capability mpi
 wise_require_capability cp2k-toolchain

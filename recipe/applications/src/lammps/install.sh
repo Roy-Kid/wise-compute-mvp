@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 wise_id=lammps
-. /opt/wise/lib/wise/feature.sh
+. /usr/local/lib/devcontainer-features/feature.sh
 
 wise_require_capability mpi
 wise_require fftw
@@ -138,7 +138,7 @@ downloads=$(sed -n 's/^\(DOWNLOAD_[A-Z0-9_]*\):BOOL=\(ON\|YES\|TRUE\|1\)$/\1/p' 
 
 objects=$PWD/objects
 if [ -n "$part" ]; then
-    objects=$WISE_PREFIX/share/wise/lammps-objects
+    objects=$WISE_PREFIX/share/lammps/build-objects
     mkdir -p "$objects"
 fi
 LAMMPS_SRC=$src LAMMPS_BUILD=$build LAMMPS_OBJECTS=$objects LAMMPS_PART=$part cmake --build "$build" -j"$(nproc)"

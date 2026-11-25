@@ -1,16 +1,16 @@
 {
   "id": "openmpi",
-  "version": "2.0.2",
+  "version": "3.0.0",
   "name": "Open MPI",
-  "description": "Builds Open MPI 5.0.11 into /opt/wise with UCX, OFI and PMIx. Use this Feature when the base image does not already provide MPI. CPU is the default delivery; a CUDA build uses the NVIDIA Fortran compiler.",
+  "description": "Builds Open MPI 5.0.11 into /usr/local with UCX, OFI and PMIx. Use this Feature when the base image does not already provide MPI. CPU is the default delivery; a CUDA build uses the NVIDIA Fortran compiler.",
   "containerEnv": {
     "OMPI_MCA_pml": "ucx,ob1",
     "OMPI_MCA_osc": "ucx,sm,rdma"
   },
   "dependsOn": {
-    "harbor.will/wise/wise-compute-features/infra/core:2": {},
-    "harbor.will/wise/wise-compute-features/infra/openmp:2": {},
-    "harbor.will/wise/wise-compute-features/infra/ucx:1": {},
-    "harbor.will/wise/wise-compute-features/infra/libfabric:1": {}
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:3": {},
+    "harbor.will/wise/wise-compute-features/infra/ucx:2": {},
+    "harbor.will/wise/wise-compute-features/infra/libfabric:2": {}
   }
 }

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 wise_id=mpich
-. /opt/wise/lib/wise/feature.sh
+. /usr/local/lib/devcontainer-features/feature.sh
 
 wise_require libfabric
 # One MPI per image: openmpi and mpich both claim the mpi capability.

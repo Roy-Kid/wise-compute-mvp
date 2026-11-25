@@ -7,7 +7,7 @@ import { delimiter, join } from "node:path";
 import { test } from "node:test";
 import { devcontainerCli } from "../../cli/src/devcontainer.ts";
 import { parseFeatureReference, publishOrder, readStack, stageLocalFeatures } from "../../cli/src/features.ts";
-import { laterStages, lammpsStage, partCount, partTags, prepareStage, stageCount, stageFeatures, stageTags } from "../delivery/stages.ts";
+import { laterStages, lammpsStage, partCount, prepareStage, stageCount } from "../delivery/stages.ts";
 
 const recipe = join(import.meta.dirname, "..");
 const featureTiers = ["infra", "toolchains", "applications", "providers"] as const;
@@ -202,11 +202,11 @@ const providersOf = (capability: string) =>
 test("every Feature uses the SDK: sources it under its own id and registers when done", () => {
   for (const feature of features) {
     if (feature.id === "core") continue;
-    assert.match(feature.install, new RegExp(`^#!/bin/sh\nset -eu\nwise_id=${feature.id}\n\\. /opt/wise/lib/wise/feature\\.sh\n`), feature.id);
+    assert.match(feature.install, new RegExp(`^#!/bin/sh\nset -eu\nwise_id=${feature.id}\n\\. /usr/local/lib/devcontainer-features/feature\\.sh\n`), feature.id);
     assert.match(feature.install, /\nwise_done\n$/, `${feature.id} ends with wise_done`);
     assert.ok(feature.dependsOn.includes(reference("core")), `${feature.id} depends on core`);
     // Features ask the registry; they never probe each other's files.
-    assert.doesNotMatch(feature.install, /pkg-config --exists|mpichversion\)|-[ex] \/opt\/wise\/bin\/mpi|ls [^\n]*\.so[^\n]*>\/dev\/null/, `${feature.id} probes another Feature`);
+    assert.doesNotMatch(feature.install, /pkg-config --exists|mpichversion\)|-[ex] \/usr\/local\/bin\/mpi|ls [^\n]*\.so[^\n]*>\/dev\/null/, `${feature.id} probes another Feature`);
   }
 });
 
@@ -226,7 +226,7 @@ test("the MPI capability resolves to the base or the selected Feature and reject
     . "$1"
     WISE_REGISTRY=$2
     mkdir "$WISE_REGISTRY/provides"
-    test "$WISE_MPI_ROOT" = /opt/wise
+    test "$WISE_MPI_ROOT" = /usr/local
     if wise_provider mpi; then exit 1; fi
     export WISE_BASE_MPI=openmpi WISE_BASE_EXAMPLE_CAPABILITY=example
     test "$(wise_provider example-capability)" = example
@@ -300,21 +300,15 @@ test("the CI stages install the delivery exactly once, with every requirement me
     assert.deepEqual(unmet(order.flat(), baseMpi[variant]), [], variant);
     const sorted = (items: Resolved[]) => items.map(item => JSON.stringify(item)).sort();
     assert.deepEqual(sorted(order.flat()), sorted(resolved[variant]), variant);
-    const tags = stageTags(variant);
-    assert.equal(new Set(tags).size, stageFeatures(variant).length);
-    assert.deepEqual(tags, stageTags(variant), "tags depend on content only");
-    for (const tag of tags) assert.match(tag, /^build-(cpu|cuda)-\d-[0-9a-f]{16}$/);
   }
 });
 
 test("the CUDA build compiles LAMMPS in parts, one CI job each", () => {
   const count = partCount("cuda", lammpsStage);
   for (let stage = 1; stage <= stageCount; stage++) assert.equal(partCount("cpu", stage), 0);
-  assert.deepEqual(partTags("cpu", lammpsStage), []);
-  assert.equal(new Set(partTags("cuda", lammpsStage)).size, count);
   const workflow = readFileSync(join(recipe, "..", ".github", "workflows", "materials-variant.yml"), "utf8");
   assert.ok(workflow.includes(`part: [${Array.from({ length: count }, (_, index) => index + 1).join(", ")}]`));
-  assert.ok(workflow.includes(`goal: ${lammpsStage}.\${{ matrix.part }}`));
+  assert.ok(workflow.includes(`goal: ${lammpsStage}.\${{ matrix.part }}\n      previous: ${lammpsStage - 1}`));
   const stage = prepareStage("cuda", lammpsStage, "wise-compute:previous", count);
   try {
     const options = installOrder(stage.workspace, stage.config, stage.stack).map(item => item.options);
@@ -323,6 +317,20 @@ test("the CUDA build compiles LAMMPS in parts, one CI job each", () => {
     stage.cleanup();
   }
   for (const part of [0, count + 1]) assert.throws(() => prepareStage("cuda", lammpsStage, "wise-compute:previous", part), /no part/);
+});
+
+test("CI passes stage checkpoints within the workflow and reserves registry pushes for release", () => {
+  const workflows = join(recipe, "..", ".github", "workflows");
+  const chain = readFileSync(join(workflows, "materials-variant.yml"), "utf8");
+  const worker = readFileSync(join(workflows, "materials-stage.yml"), "utf8");
+  for (let stage = 2; stage <= stageCount; stage++) {
+    assert.ok(chain.includes(`goal: '${stage}'\n      previous: ${stage - 1}`));
+  }
+  assert.ok(chain.includes(`goal: 'release'\n      previous: ${stageCount}`));
+  assert.ok(worker.includes(`pattern: checkpoint-cuda-${lammpsStage}.*`));
+  assert.match(worker, /if: inputs\.goal == 'release'\n[\s\S]* image push /);
+  const stageScript = readFileSync(join(recipe, "delivery", "ci-stage.ts"), "utf8");
+  assert.doesNotMatch(worker + stageScript, /ghcr\.io|STAGE_REPOSITORY|registry\.push\(/);
 });
 
 test("the Feature SDK retries a failing command and then gives up", () => {

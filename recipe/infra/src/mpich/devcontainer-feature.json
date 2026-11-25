@@ -1,11 +1,11 @@
 {
   "id": "mpich",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "name": "MPICH",
-  "description": "Builds MPICH 4.3.2 into /opt/wise with ch4:ofi on libfabric. Use this Feature when the base image does not already provide MPI. Switching MPI requires rebuilding its bindings.",
+  "description": "Builds MPICH 4.3.2 into /usr/local with ch4:ofi on libfabric. Use this Feature when the base image does not already provide MPI. Switching MPI requires rebuilding its bindings.",
   "dependsOn": {
-    "harbor.will/wise/wise-compute-features/infra/core:2": {},
-    "harbor.will/wise/wise-compute-features/infra/openmp:2": {},
-    "harbor.will/wise/wise-compute-features/infra/libfabric:1": {}
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:3": {},
+    "harbor.will/wise/wise-compute-features/infra/libfabric:2": {}
   }
 }

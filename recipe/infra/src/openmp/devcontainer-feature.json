@@ -1,6 +1,6 @@
 {
   "id": "openmp",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "name": "Compilers and OpenMP",
   "description": "GCC, G++ and gfortran with the OpenMP runtime, CMake, git and pkg-config: the build toolchain of every source-built Feature. Everything is compiled for the x86-64-v3 baseline (AVX2, FMA). Threads are pinned to cores close to their MPI rank by default.",
   "containerEnv": {
@@ -13,6 +13,6 @@
     "OMP_PROC_BIND": "close"
   },
   "dependsOn": {
-    "harbor.will/wise/wise-compute-features/infra/core:2": {}
+    "harbor.will/wise/wise-compute-features/infra/core:3": {}
   }
 }

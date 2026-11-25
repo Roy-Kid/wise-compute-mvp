@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 wise_id=mpi4py
-. /opt/wise/lib/wise/feature.sh
+. /usr/local/lib/devcontainer-features/feature.sh
 
 wise_require python
 wise_require_capability mpi

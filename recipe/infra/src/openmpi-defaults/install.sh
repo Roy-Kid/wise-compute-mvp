@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 wise_id=openmpi-defaults
-. /opt/wise/lib/wise/feature.sh
+. /usr/local/lib/devcontainer-features/feature.sh
 
 # Open MPI takes a single name in OMPI_MCA_pml: "ucx,ob1" only ever selects UCX and fails where UCX finds no device.
 # The empty value set by this Feature means no preference.

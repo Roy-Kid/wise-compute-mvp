@@ -1,15 +1,15 @@
 {
   "id": "plumed",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "name": "PLUMED",
-  "description": "Builds PLUMED 2.10.2 (the plumed driver and libplumed) into /opt/wise with the image's MPI and OpenBLAS. Applications enable their PLUMED interface only when this Feature is installed.",
+  "description": "Builds PLUMED 2.10.2 (the plumed driver and libplumed) into /usr/local with the image's MPI and OpenBLAS. Applications enable their PLUMED interface only when this Feature is installed.",
   "dependsOn": {
-    "harbor.will/wise/wise-compute-features/infra/core:2": {},
-    "harbor.will/wise/wise-compute-features/infra/openmp:2": {},
-    "harbor.will/wise/wise-compute-features/infra/linear-algebra:2": {}
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:3": {},
+    "harbor.will/wise/wise-compute-features/infra/linear-algebra:3": {}
   },
   "installsAfter": [
-    "harbor.will/wise/wise-compute-features/infra/openmpi:2",
-    "harbor.will/wise/wise-compute-features/infra/mpich:2"
+    "harbor.will/wise/wise-compute-features/infra/openmpi:3",
+    "harbor.will/wise/wise-compute-features/infra/mpich:3"
   ]
 }

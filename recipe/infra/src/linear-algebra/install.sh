@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 wise_id=linear-algebra
-. /opt/wise/lib/wise/feature.sh
+. /usr/local/lib/devcontainer-features/feature.sh
 
 backend=openmp
 if wise_cuda; then backend=pthread; fi
