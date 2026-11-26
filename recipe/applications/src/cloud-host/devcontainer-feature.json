@@ -1,0 +1,15 @@
+{
+  "id": "cloud-host",
+  "version": "1.0.0",
+  "name": "Cloud host tools and reports",
+  "description": "Installs common CLI tools, CJK fonts, headless plotting and PDF generation into a lightweight Ubuntu cloud image.",
+  "containerEnv": {
+    "MATPLOTLIBRC": "/usr/local/share/wise-cloud/matplotlibrc",
+    "WISE_REPORT_FONT": "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf"
+  },
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/toolchains/python:2": {},
+    "harbor.will/wise/wise-compute-features/applications/numpy:2": {}
+  }
+}
