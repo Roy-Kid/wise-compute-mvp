@@ -10,7 +10,7 @@ type Options = Record<string, string | boolean>;
 type Features = Record<string, Options>;
 type Scenarios = Record<string, { features: Features }>;
 
-const variants = ["cpu", "cuda", "smp"] as const;
+const variants = ["cpu", "cuda", "smp", "cloud"] as const;
 const stack = readStack(fileURLToPath(new URL("../", import.meta.url)));
 const global = new URL("./test/_global/", import.meta.url);
 const scenarios = Object.fromEntries(variants.map(variant => {
@@ -19,10 +19,10 @@ const scenarios = Object.fromEntries(variants.map(variant => {
 }));
 
 for (const variant of variants) {
-  test(`${variant} scenarios start with OpenMP and exercise the delivery Feature options`, () => {
+  test(`${variant} scenarios exercise the delivery Feature options`, () => {
     const plan = scenarios[variant];
-    assert.equal(Object.keys(plan)[0], "openmp");
-    assert.deepEqual(Object.keys(plan.openmp.features), ["core", "openmp"]);
+    assert.equal(Object.keys(plan)[0], variant === "cloud" ? "cloud" : "openmp");
+    if (variant !== "cloud") assert.deepEqual(Object.keys(plan.openmp.features), ["core", "openmp"]);
     for (const [name, scenario] of Object.entries(plan)) {
       assert.ok(existsSync(new URL(`${name}.sh`, global)), `${name} has no test script`);
       for (const id of Object.keys(scenario.features)) {

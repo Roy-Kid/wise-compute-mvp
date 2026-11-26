@@ -1,0 +1,22 @@
+{
+  "cloud": {
+    "build": {
+      "dockerfile": "Dockerfile",
+      "context": "."
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": [
+      "--network=none",
+      "--tmpfs=/tmp:exec,mode=1777"
+    ],
+    "features": {
+      "core": {},
+      "python": {},
+      "numpy": {},
+      "cloud-host": {}
+    }
+  }
+}

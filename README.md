@@ -4,6 +4,7 @@ WiseHub 将 Dev Container 工作区构建为镜像，按 digest 推拉 OCI 镜�
 
 - [CLI 用法](docs/cli.md)
 - [镜像配方、运行与验收](recipe/README.md)
+- [轻量 CPU 云主机镜像](recipe/delivery/cloud/README.md)
 - [镜像构建和验收排障](docs/troubleshooting.md)
 - [待办](docs/roadmap.md)
 
@@ -25,7 +26,7 @@ npm run test:delivery -- cpu wise-compute:materials-cpu
 
 在 GitHub Actions 仓库变量中设置 `DOCKERHUB_REPOSITORY`（`namespace/repository`）和 `DOCKERHUB_USERNAME`，将可读写目标仓库的 PAT 保存为 Actions secret `DOCKERHUB_TOKEN`。任务默认使用 `ubuntu-24.04`。可分别用 `CPU_BUILD_RUNNER` 和 `CUDA_BUILD_RUNNER` 指定已配置的 x64 Linux runner 标签。
 
-[GitLab CI](.gitlab-ci.yml) 在 MR 和主分支运行测试及打包检查。镜像相关 MR 会构建并离线验收 CPU/CUDA 镜像，需要支持 privileged Docker-in-Docker 的 linux/amd64 runner。
+[GitLab CI](.gitlab-ci.yml) 在 MR 和主分支运行测试及打包检查。镜像相关 MR 会构建并离线验收材料 CPU/CUDA 镜像与轻量云主机镜像，需要支持 privileged Docker-in-Docker 的 linux/amd64 runner。
 
 每次合并到默认分支 `main` 后，CI 自动将 Feature 发布到 `harbor.will/wise/wise-compute-features`，并用该提交的 Feature 源码构建两套镜像。各自通过离线验收后推送到 `harbor.will/wise/wise-compute-runtime:materials-<cpu|cuda>-<完整提交 SHA>`。`release.json` 记录源码提交、镜像摘要和验收状态。重试会拉取并验收同一提交的已有镜像，CUDA 设备验收在 GPU 节点执行。
 

@@ -6,8 +6,8 @@ import { devcontainerCli, devcontainerTempEnv } from "../cli/src/devcontainer.ts
 import { readStack, resolveLocal } from "../cli/src/features.ts";
 
 const [variant = "cpu", target = "all", ...extra] = process.argv.slice(2);
-if (!["cpu", "cuda", "smp"].includes(variant) || extra.length) {
-  throw new Error("usage: npm run test:features -- [cpu|cuda|smp] [all|scenario]");
+if (!["cpu", "cuda", "smp", "cloud"].includes(variant) || extra.length) {
+  throw new Error("usage: npm run test:features -- [cpu|cuda|smp|cloud] [all|scenario]");
 }
 
 const recipe = join(import.meta.dirname, "..", "recipe");
@@ -63,8 +63,8 @@ try {
     }
     const global = join(project, "test", "_global");
     mkdirSync(global, { recursive: true });
-    // The SMP delivery is the CPU base without an MPI.
-    cpSync(join(recipe, "base", variant === "smp" ? "cpu" : variant, ".devcontainer"), join(global, name), {
+    const base = variant === "cuda" ? "cuda" : "cpu";
+    cpSync(join(recipe, "base", base, ".devcontainer"), join(global, name), {
       recursive: true, filter: source => basename(source) !== "devcontainer.json",
     });
     cpSync(join(tests, "examples"), join(global, "examples"), { recursive: true });

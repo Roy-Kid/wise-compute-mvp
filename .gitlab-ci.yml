@@ -55,7 +55,7 @@ features:
     expire_in: never
     paths: [features.json]
 
-.materials:
+.image:
   stage: image
   image:
     name: docker:28.5.2-dind
@@ -63,9 +63,6 @@ features:
   variables:
     DOCKER_HOST: unix:///tmp/wise-docker.sock
   timeout: 5h
-  parallel:
-    matrix:
-      - VARIANT: [cpu, cuda]
   before_script:
     - apk add --no-cache ca-certificates nodejs-current npm
     - npm ci
@@ -83,8 +80,11 @@ features:
       }
 
 materials:verify:
-  extends: .materials
-  rules:
+  extends: .image
+  parallel: &materials_variants
+    matrix:
+      - VARIANT: [cpu, cuda]
+  rules: &verify_image_rules
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes: [recipe/**/*, cli/**/*, scripts/**/*, package.json, package-lock.json, .gitlab-ci.yml]
     - if: '$CI_PIPELINE_SOURCE == "web"'
@@ -96,8 +96,18 @@ materials:verify:
     when: always
     paths: [image.txt]
 
+cloud:verify:
+  extends: .image
+  rules: *verify_image_rules
+  timeout: 30m
+  script:
+    - start_docker
+    - npx --no-install wisehub image build --workspace-folder recipe/delivery/cloud --local-features recipe --platform linux/amd64 --image wise-compute:cloud-host
+    - npm run test:delivery -- cloud wise-compute:cloud-host
+
 materials:publish:
-  extends: .materials
+  extends: .image
+  parallel: *materials_variants
   rules:
     - if: *main_push
   resource_group: materials-$CI_COMMIT_SHA-$VARIANT

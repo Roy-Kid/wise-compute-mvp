@@ -1,0 +1,10 @@
+{
+  "name": "WiseHub lightweight cloud host",
+  "build": {
+    "dockerfile": "../../../base/cpu/.devcontainer/Dockerfile",
+    "context": "../../../base/cpu/.devcontainer"
+  },
+  "features": {
+    "harbor.will/wise/wise-compute-features/applications/cloud-host:1": {}
+  }
+}

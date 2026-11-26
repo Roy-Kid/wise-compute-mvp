@@ -8,12 +8,13 @@ import { parseFeatureReference } from "../../cli/src/features.ts";
 
 /** Runs the full-image scenario on an already built image. */
 export function verifyImage(image: string, variant: string): void {
-  if (!["cpu", "cuda", "smp"].includes(variant)) throw new Error(`Unknown delivery variant: ${variant}`);
+  if (!["cpu", "cuda", "smp", "cloud"].includes(variant)) throw new Error(`Unknown delivery variant: ${variant}`);
   const recipe = new URL(`./${variant}/.devcontainer/devcontainer.json`, import.meta.url);
   const { features } = parse(readFileSync(recipe, "utf8"));
   const ids = Object.keys(features).map(reference => parseFeatureReference(reference).id);
   const gpu = variant === "cuda" && process.env.FEATURE_TEST_GPU === "1";
-  const runArgs = ["--network=none", "--shm-size=2g", "--tmpfs=/tmp:exec,mode=1777"];
+  const runArgs = ["--network=none", "--tmpfs=/tmp:exec,mode=1777"];
+  if (variant !== "cloud") runArgs.push("--shm-size=2g");
   if (gpu) runArgs.push("--gpus=1");
   const scenario = {
     image,
@@ -28,6 +29,7 @@ export function verifyImage(image: string, variant: string): void {
       MATERIALS_TEST_VARIANT: variant,
     },
   };
+  const name = variant === "cloud" ? "cloud" : "full";
   const fixtures = new URL("../feature-tests/test/_global/", import.meta.url);
   const project = mkdtempSync(join(tmpdir(), "materials-delivery-test-"));
   try {
@@ -39,8 +41,8 @@ export function verifyImage(image: string, variant: string): void {
     if (variant === "cuda") {
       cpSync(new URL("../applications/src/lammps/lammps-cuda.sh", import.meta.url), join(global, "examples/lammps-cuda.sh"));
     }
-    cpSync(new URL("full.sh", fixtures), join(global, "full.sh"));
-    writeFileSync(join(global, "scenarios.json"), JSON.stringify({ full: scenario }, null, 2) + "\n");
+    cpSync(new URL(`${name}.sh`, fixtures), join(global, `${name}.sh`));
+    writeFileSync(join(global, "scenarios.json"), JSON.stringify({ [name]: scenario }, null, 2) + "\n");
     const { script } = devcontainerCli();
     execFileSync(process.execPath, [script, "features", "test", "--global-scenarios-only", "--project-folder", project],
       { env: devcontainerTempEnv(project), stdio: "inherit" });
@@ -51,6 +53,6 @@ export function verifyImage(image: string, variant: string): void {
 
 if (import.meta.main) {
   const [variant, image, ...extra] = process.argv.slice(2);
-  if (!variant || !image || extra.length) throw new Error("usage: npm run test:delivery -- cpu|cuda|smp IMAGE");
+  if (!variant || !image || extra.length) throw new Error("usage: npm run test:delivery -- cpu|cuda|smp|cloud IMAGE");
   verifyImage(image, variant);
 }
