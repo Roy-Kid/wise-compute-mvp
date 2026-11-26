@@ -86,10 +86,11 @@ materials:verify:
   extends: .materials
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes: [recipe/**/*, cli/**/*, package.json, package-lock.json, .gitlab-ci.yml]
+      changes: [recipe/**/*, cli/**/*, scripts/**/*, package.json, package-lock.json, .gitlab-ci.yml]
     - if: '$CI_PIPELINE_SOURCE == "web"'
   script:
     - start_docker
+    - npm run test:features -- "$VARIANT" openmp
     - node recipe/delivery/ci-image.mjs "$VARIANT"
   artifacts:
     when: always
@@ -106,6 +107,7 @@ materials:publish:
     - install -D -m 0644 "$HARBOR_CA" /usr/local/share/ca-certificates/wise-harbor.crt
     - update-ca-certificates
     - start_docker
+    - npm run test:features -- "$VARIANT" openmp
     - node recipe/delivery/ci-image.mjs "$VARIANT" --publish
   artifacts:
     when: always

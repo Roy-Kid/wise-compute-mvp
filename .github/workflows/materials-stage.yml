@@ -81,6 +81,9 @@ jobs:
         run: |
           npm ci --registry=https://registry.npmjs.org --replace-registry-host=always
           npm test
+          if [[ "$GOAL" == 1 ]]; then
+            npm run test:features -- "$VARIANT" openmp
+          fi
           node recipe/delivery/ci-stage.ts "$VARIANT" "$GOAL"
 
       - name: Pack checkpoint

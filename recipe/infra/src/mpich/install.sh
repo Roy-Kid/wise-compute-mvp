@@ -20,7 +20,7 @@ set -- --prefix="$WISE_PREFIX" --disable-static CC=gcc CXX=g++ FC="$fc" \
     --with-device=ch4:ofi --with-libfabric="$WISE_PREFIX" --with-hwloc=embedded
 if wise_cuda; then set -- "$@" --with-cuda="$CUDA_HOME"; fi
 ./configure "$@"
-make -j"$(nproc)"
+make -j"$(wise_build_jobs)"
 make install-strip
 ldconfig
 "$WISE_PREFIX/bin/mpichversion" | grep -q 'ch4:ofi' || wise_fail "MPICH was not built with the ch4:ofi device"

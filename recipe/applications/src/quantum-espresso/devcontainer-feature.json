@@ -11,7 +11,8 @@
         "70",
         "80",
         "90",
-        "80,90"
+        "80,90",
+        "120"
       ],
       "default": "",
       "description": "GPU compute capabilities for nvfortran, comma separated (80,90 builds for A100 and H100); requires the CUDA base image. Empty builds the CPU version with GCC."

@@ -7,3 +7,8 @@ export function devcontainerCli(): { script: string; version: string } {
   const manifest = require.resolve("@devcontainers/cli/package.json");
   return { script: join(dirname(manifest), "devcontainer.js"), version: require(manifest).version };
 }
+
+/** The CLI builds temporary project paths from timestamps. Parallel invocations need separate roots. */
+export function devcontainerTempEnv(temp: string): NodeJS.ProcessEnv {
+  return { ...process.env, TMPDIR: temp, TMP: temp, TEMP: temp };
+}

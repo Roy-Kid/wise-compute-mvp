@@ -22,7 +22,7 @@ set -- --prefix="$WISE_PREFIX" --disable-static CC=gcc CXX=g++ FC="$fc" \
     --with-ucx="$WISE_PREFIX" --with-ofi="$WISE_PREFIX"
 if wise_cuda; then set -- "$@" --with-cuda="$CUDA_HOME" --with-cuda-libdir="$CUDA_HOME/lib64/stubs"; fi
 ./configure "$@"
-make -j"$(nproc)"
+make -j"$(wise_build_jobs)"
 make install-strip
 ldconfig
 info=$("$WISE_PREFIX/bin/ompi_info" --parsable --all)

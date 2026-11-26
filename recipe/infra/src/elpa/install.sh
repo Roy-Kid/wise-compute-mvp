@@ -12,7 +12,7 @@ wise_fetch_tar https://elpa.mpcdf.mpg.de/software/tarball-archive/Releases/2026.
     02e3c59fec53cd8eb66a4cc15fa4fbf190cf9654227223fb8ad55713e9427932 src
 # x86-64-v3 baseline: AVX2 kernels, no AVX-512.
 # No test programs: nothing installs them, and HPC-X's mpifort puts a stray quote into the link line of the C ones.
-# Check MPI threading under the final image's launcher in verify.sh.
+# The delivery scenario checks MPI threading under the final image's launcher.
 set -- --prefix="$WISE_PREFIX" --disable-static --enable-openmp \
     --without-threading-support-check-during-build --enable-runtime-threading-support-checks --enable-allow-thread-limiting \
     --disable-c-tests --disable-cpp-tests --disable-fortran-tests --disable-Fortran-tests \
@@ -32,7 +32,7 @@ fi
 mkdir build
 cd build
 ../src/configure "$@"
-make -j"$(nproc)"
+make -j"$(wise_build_jobs)"
 make install-strip
 test -e "$WISE_PREFIX/lib/libelpa_openmp.so" || wise_fail "the OpenMP build is missing"
 wise_done

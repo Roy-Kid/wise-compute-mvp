@@ -1,0 +1,298 @@
+{
+  "openmp": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "openmp": {}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777"]
+  },
+  "toolchains": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "openmp": {},
+      "python": {},
+      "conda": {},
+      "uv": {},
+      "rust": {},
+      "nodejs": {}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777"]
+  },
+  "mpi": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "openmp": {},
+      "python": {},
+      "conda": {},
+      "uv": {},
+      "rust": {},
+      "nodejs": {},
+      "openmpi-defaults": {}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777"]
+  },
+  "libraries": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "openmp": {},
+      "python": {},
+      "conda": {},
+      "uv": {},
+      "rust": {},
+      "nodejs": {},
+      "openmpi-defaults": {},
+      "linear-algebra": {},
+      "fftw": {},
+      "scalapack": {},
+      "hdf5": {},
+      "netcdf": {},
+      "elpa": {"cudaArch":"120"}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777"]
+  },
+  "python": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "openmp": {},
+      "python": {},
+      "conda": {},
+      "uv": {},
+      "rust": {},
+      "nodejs": {},
+      "openmpi-defaults": {},
+      "numpy": {},
+      "materials-python": {},
+      "mpi4py": {}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777"]
+  },
+  "packmol": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "openmp": {},
+      "packmol": {}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777"]
+  },
+  "wannier90": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "openmp": {},
+      "python": {},
+      "conda": {},
+      "uv": {},
+      "rust": {},
+      "nodejs": {},
+      "openmpi-defaults": {},
+      "linear-algebra": {},
+      "fftw": {},
+      "scalapack": {},
+      "hdf5": {},
+      "netcdf": {},
+      "elpa": {"cudaArch":"120"},
+      "wannier90": {}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777"]
+  },
+  "lammps": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "openmp": {},
+      "python": {},
+      "conda": {},
+      "uv": {},
+      "rust": {},
+      "nodejs": {},
+      "openmpi-defaults": {},
+      "linear-algebra": {},
+      "fftw": {},
+      "scalapack": {},
+      "hdf5": {},
+      "netcdf": {},
+      "elpa": {"cudaArch":"120"},
+      "lammps": {"variant":"cuda","gpuArch":"BLACKWELL120","extraPackages":"H5MD,NETCDF"}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777"]
+  },
+  "quantum-espresso": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "openmp": {},
+      "python": {},
+      "conda": {},
+      "uv": {},
+      "rust": {},
+      "nodejs": {},
+      "openmpi-defaults": {},
+      "linear-algebra": {},
+      "fftw": {},
+      "scalapack": {},
+      "hdf5": {},
+      "netcdf": {},
+      "elpa": {"cudaArch":"120"},
+      "quantum-espresso": {"cudaCC":"120","elpa":true,"hdf5":true}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777","--gpus=1"]
+  },
+  "cp2k-integrals": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "openmp": {},
+      "python": {},
+      "conda": {},
+      "uv": {},
+      "rust": {},
+      "nodejs": {},
+      "openmpi-defaults": {},
+      "linear-algebra": {},
+      "fftw": {},
+      "scalapack": {},
+      "hdf5": {},
+      "netcdf": {},
+      "elpa": {"cudaArch":"120"},
+      "cp2k-integrals": {}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777"]
+  },
+  "cp2k-toolchain": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "openmp": {},
+      "python": {},
+      "conda": {},
+      "uv": {},
+      "rust": {},
+      "nodejs": {},
+      "openmpi-defaults": {},
+      "linear-algebra": {},
+      "fftw": {},
+      "scalapack": {},
+      "hdf5": {},
+      "netcdf": {},
+      "elpa": {"cudaArch":"120"},
+      "cp2k-integrals": {},
+      "cp2k-toolchain": {"gpuVersion":"RTXPRO5000","elpa":true,"hdf5":true,"largeSystems":true}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777"]
+  },
+  "cp2k": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "openmp": {},
+      "python": {},
+      "conda": {},
+      "uv": {},
+      "rust": {},
+      "nodejs": {},
+      "openmpi-defaults": {},
+      "linear-algebra": {},
+      "fftw": {},
+      "scalapack": {},
+      "hdf5": {},
+      "netcdf": {},
+      "elpa": {"cudaArch":"120"},
+      "cp2k-integrals": {},
+      "cp2k-toolchain": {"gpuVersion":"RTXPRO5000","elpa":true,"hdf5":true,"largeSystems":true},
+      "cp2k": {}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777","--gpus=1"]
+  },
+  "plumed": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "openmp": {},
+      "python": {},
+      "conda": {},
+      "uv": {},
+      "rust": {},
+      "nodejs": {},
+      "openmpi-defaults": {},
+      "linear-algebra": {},
+      "fftw": {},
+      "scalapack": {},
+      "hdf5": {},
+      "netcdf": {},
+      "elpa": {"cudaArch":"120"},
+      "plumed": {}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777"]
+  },
+  "aliyun": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "openmp": {},
+      "aliyun": {}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777"]
+  }
+}

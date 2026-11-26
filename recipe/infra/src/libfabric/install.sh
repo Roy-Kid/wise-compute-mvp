@@ -14,7 +14,7 @@ if wise_cuda; then
     set -- "$@" --with-cuda="$CUDA_HOME" --with-gdrcopy="${GDRCOPY_HOME:?}" --enable-cuda-dlopen --enable-gdrcopy-dlopen
 fi
 ./configure "$@"
-make -j"$(nproc)"
+make -j"$(wise_build_jobs)"
 make install-strip
 ldconfig
 providers=$("$WISE_PREFIX/bin/fi_info" -l)

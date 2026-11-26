@@ -16,7 +16,7 @@ for precision in double single; do
         --enable-avx512 --enable-fma
     [ "$precision" = double ] || set -- "$@" --enable-float
     mkdir "$precision"
-    (cd "$precision" && ../src/configure "$@" && make -j"$(nproc)" && make install-strip)
+    (cd "$precision" && ../src/configure "$@" && make -j"$(wise_build_jobs)" && make install-strip)
 done
 for lib in libfftw3 libfftw3_omp libfftw3_threads libfftw3_mpi libfftw3f libfftw3f_omp libfftw3f_threads libfftw3f_mpi; do
     test -e "$WISE_PREFIX/lib/$lib.so" || wise_fail "$lib was not built"

@@ -3,11 +3,15 @@ set -eu
 wise_id=cp2k
 . /usr/local/lib/devcontainer-features/feature.sh
 
-wise_require_capability mpi
 wise_require_capability cp2k-toolchain
-wise_require fftw
-wise_require scalapack
 deps=$WISE_PREFIX/cp2k-deps
+# On the CUDA base CP2K has a GNU stack of its own; see the cp2k-integrals Feature.
+. "$deps/gnu-stack.sh"
+if ! cp2k_gnu_stack; then
+    wise_require_capability mpi
+    wise_require fftw
+    wise_require scalapack
+fi
 # commit, gpu, elpa, hdf5 and large, as the cp2k-toolchain Feature built them.
 # shellcheck source=/dev/null
 . "$deps/wise.env"
@@ -18,34 +22,39 @@ wise_fetch_git https://github.com/cp2k/cp2k.git "$commit" "$work/src" --all
 native=$work/src/cmake/CompilerConfiguration.cmake
 sed -i 's/"-m[a-z]*=native;-mtune=native"/"-march=x86-64-v3;-mtune=generic"/' "$native"
 grep -q '"-march=x86-64-v3;-mtune=generic"' "$native" || wise_fail "CP2K's native tuning was not replaced"
-if wise_cuda; then
-    wise_nvfortran_env
-    for flags in CFLAGS CXXFLAGS FFLAGS FCFLAGS F77FLAGS F90FLAGS; do eval "export $flags=\"\$$flags -fPIC\""; done
+if cp2k_gnu_stack; then
+    cp2k_gnu_env
+    # Out of the default PATH and loader directories: the commands in $WISE_PREFIX/bin set its environment.
+    prefix=$deps/cp2k
+    fftw=$(echo "$deps"/install/fftw-*/lib)
+    set --
+else
+    prefix=$WISE_PREFIX
+    fftw=$WISE_PREFIX/lib
+    set -- -DMPI_C_COMPILER="$WISE_MPI_ROOT/bin/mpicc" -DMPI_CXX_COMPILER="$WISE_MPI_ROOT/bin/mpicxx" \
+        -DMPI_Fortran_COMPILER="$WISE_MPI_ROOT/bin/mpifort"
 fi
 
-set -- -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$WISE_PREFIX" \
-    -DMPI_C_COMPILER="$WISE_MPI_ROOT/bin/mpicc" -DMPI_CXX_COMPILER="$WISE_MPI_ROOT/bin/mpicxx" \
-    -DMPI_Fortran_COMPILER="$WISE_MPI_ROOT/bin/mpifort" \
+set -- "$@" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$prefix" \
     -DCP2K_USE_MPI=ON -DCP2K_USE_LIBXC=ON -DCP2K_USE_LIBINT2=ON -DCP2K_USE_FFTW3=ON -DCP2K_USE_LIBXS=ON -DCP2K_USE_LIBXSMM=ON \
     -DCP2K_BLAS_VENDOR=OpenBLAS -DCP2K_SCALAPACK_VENDOR=GENERIC
 [ "$elpa" != true ] || set -- "$@" -DCP2K_USE_ELPA=ON
 [ "$hdf5" != true ] || set -- "$@" -DCP2K_USE_HDF5=ON
 [ "$large" != true ] || set -- "$@" -DCP2K_USE_COSMA=ON -DCP2K_USE_SPLA=ON -DCP2K_USE_SIRIUS=ON \
     -DCP2K_USE_SPGLIB=ON -DCP2K_USE_VORI=ON
-[ -z "$gpu" ] || set -- "$@" -DCP2K_USE_ACCEL=CUDA -DCP2K_WITH_GPU="$gpu"
+case $gpu in
+    '') ;;
+    RTXPRO5000) set -- "$@" -DCP2K_USE_ACCEL=CUDA -DCMAKE_CUDA_ARCHITECTURES:STRING=120 ;;
+    *) set -- "$@" -DCP2K_USE_ACCEL=CUDA -DCP2K_WITH_GPU="$gpu" ;;
+esac
 [ -z "$gpu" ] || [ "$large" != true ] || set -- "$@" -DCP2K_USE_SPLA_GEMM_OFFLOADING=ON
-if wise_cuda; then
-    # CP2K and its dependencies use the same Fortran ABI and OpenMP runtime.
-    set -- "$@" -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" -DCMAKE_Fortran_COMPILER="$FC" \
-        -DCP2K_ENABLE_FFTW3_OPENMP_SUPPORT=OFF
-fi
 # cmakeArgs is a space separated list by contract; no globbing while it is split.
 set -f
 # shellcheck disable=SC2086
 set -- "$@" ${CMAKEARGS:-}
 set +f
 # SIRIUS's package looks for libfftw3_mpi without a hint.
-CMAKE_LIBRARY_PATH="$WISE_PREFIX/lib" bash -c '. "$1/install/setup" && shift && cmake "$@"' sh "$deps" -S "$work/src" -B "$work/build" "$@"
+CMAKE_LIBRARY_PATH="$fftw" bash -c '. "$1/install/setup" && shift && cmake "$@"' sh "$deps" -S "$work/src" -B "$work/build" "$@"
 cache=$work/build/CMakeCache.txt
 # The toolchain links COSMA and SIRIUS statically, and CMake silently drops an option whose dependency is
 # off: check what will actually be built.
@@ -54,6 +63,8 @@ for option in MPI LIBXC LIBINT2 FFTW3 LIBXS LIBXSMM $([ "$elpa" != true ] || ech
     grep -q "^CP2K_USE_$option:BOOL=ON$" "$cache" || wise_fail "CP2K_USE_$option is off"
 done
 if [ -n "$gpu" ]; then
+    [ "$gpu" != RTXPRO5000 ] || grep -qx 'CMAKE_CUDA_ARCHITECTURES:STRING=120' "$cache" \
+        || wise_fail "CP2K must build native RTX PRO 5000 Blackwell device code"
     for option in ENABLE_ELPA_GPU ENABLE_GRID_GPU ENABLE_DBM_GPU ENABLE_PW_GPU \
         $([ "$large" != true ] || echo USE_SPLA_GEMM_OFFLOADING); do
         grep -q "^CP2K_$option:BOOL=ON$" "$cache" || wise_fail "CP2K_$option is off"
@@ -70,12 +81,16 @@ if [ -n "$gpu" ]; then
         uses 'sirius-*/lib/libsirius_cxx.a' __cudaRegisterFatBinary
     fi
 fi
-cmake --build "$work/build" -j"$(nproc)"
+cmake --build "$work/build" -j"$(wise_build_jobs)"
 cmake --install "$work/build" --strip
-ldconfig
-bin=$WISE_PREFIX/bin/cp2k.psmp
-wise_mpi_linked "$bin" "$WISE_PREFIX/lib/libfftw3" "$WISE_PREFIX/lib/libscalapack"
-[ "$elpa" != true ] || wise_linked "$bin" "$WISE_PREFIX/lib/libelpa_openmp"
-[ "$hdf5" != true ] || wise_linked "$bin" "$WISE_PREFIX/lib/libhdf5"
-[ -z "$gpu" ] || wise_linked "$bin" libcudart
+if cp2k_gnu_stack; then
+    . "$(dirname "$0")/gnu-run.sh"
+    cp2k_gnu_install_commands "$deps" "$prefix"
+else
+    ldconfig
+    bin=$WISE_PREFIX/bin/cp2k.psmp
+    wise_mpi_linked "$bin" "$WISE_PREFIX/lib/libfftw3" "$WISE_PREFIX/lib/libscalapack"
+    [ "$elpa" != true ] || wise_linked "$bin" "$WISE_PREFIX/lib/libelpa_openmp"
+    [ "$hdf5" != true ] || wise_linked "$bin" "$WISE_PREFIX/lib/libhdf5"
+fi
 wise_done

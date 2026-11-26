@@ -13,11 +13,11 @@ export interface CommandResult {
   stderr: string;
 }
 
-export type Run = (program: string, args: readonly string[], options?: { cwd?: string; stdio?: Stdio }) =>
+export type Run = (program: string, args: readonly string[], options?: { cwd?: string; env?: NodeJS.ProcessEnv; stdio?: Stdio }) =>
   Promise<CommandResult>;
 
-export const run: Run = (program, args, { cwd, stdio = "capture" } = {}) => new Promise((resolve, reject) => {
-  const child = spawn(program, args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
+export const run: Run = (program, args, { cwd, env, stdio = "capture" } = {}) => new Promise((resolve, reject) => {
+  const child = spawn(program, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
   let stdout = "";
   let stderr = "";
   child.stdout.setEncoding("utf8").on("data", (data: string) => {

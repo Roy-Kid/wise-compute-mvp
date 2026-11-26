@@ -25,8 +25,8 @@ const stageImage = (number: number) => `materials-build:${variant}-${number}`;
 if (goal === "release") {
   const image = `wise-compute:materials-${variant}`;
   const { id } = await docker.inspectImage(stageImage(stageCount), platform);
+  verifyImage(stageImage(stageCount), variant);
   await docker.tag(id, image);
-  verifyImage(docker.binary, image, variant);
 } else {
   const previousImage = stage > 1 ? stageImage(stage - 1) : undefined;
   const build = prepareStage(variant, stage, previousImage, part);

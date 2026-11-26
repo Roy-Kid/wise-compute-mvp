@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { parse } from "jsonc-parser";
 import type { ParseError } from "jsonc-parser";
-import { devcontainerCli } from "./devcontainer.ts";
+import { devcontainerCli, devcontainerTempEnv } from "./devcontainer.ts";
 import { Docker } from "./docker.ts";
 import type { LocalImage } from "./docker.ts";
 import { stageLocalFeatures } from "./features.ts";
@@ -90,6 +91,7 @@ export class DevContainerBuilder {
       : undefined;
     let override: string | undefined;
     let staging: string | undefined;
+    let temp: string | undefined;
     try {
       if (request.baseImage !== undefined) override = stageBaseImage(local?.config ?? source, request.baseImage);
       const buildConfig = override ?? local?.config ?? config;
@@ -102,8 +104,9 @@ export class DevContainerBuilder {
         staging = `wise-build/staging:${randomUUID()}`;
         args.push("--image-name", staging);
       }
+      temp = mkdtempSync(join(tmpdir(), "wise-devcontainer-build-"));
       await checked("devcontainer", this.execute(process.execPath, [cli.script, ...args, ...extra],
-        { cwd: workspace, stdio: "tee" }));
+        { cwd: workspace, env: devcontainerTempEnv(temp), stdio: "tee" }));
       const images = await Promise.all(outputs.map(async output => {
         const image = await this.docker.inspectImage(staging ?? output.image, request.platform);
         if (staging) await this.docker.tag(image.id, output.image);
@@ -111,6 +114,7 @@ export class DevContainerBuilder {
       }));
       return { engineVersion: cli.version, images };
     } finally {
+      if (temp) rmSync(temp, { recursive: true, force: true });
       if (override) rmSync(override, { force: true });
       local?.cleanup();
       if (staging) await this.docker.removeImage(staging).catch(() => undefined);

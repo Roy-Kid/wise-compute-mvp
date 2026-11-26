@@ -4,9 +4,12 @@ wise_id=cp2k-integrals
 . /usr/local/lib/devcontainer-features/feature.sh
 
 wise_provide cp2k-integrals
-wise_require_capability mpi
-wise_require fftw
-wise_require scalapack
+. "$(dirname "$0")/gnu-stack.sh"
+if ! cp2k_gnu_stack; then
+    wise_require_capability mpi
+    wise_require fftw
+    wise_require scalapack
+fi
 wise_apt wget unzip
 wise_workdir
 work=$WISE_WORK
@@ -18,31 +21,27 @@ wise_fetch_git https://github.com/cp2k/cp2k.git "$commit" "$work/src"
 deps=$WISE_PREFIX/cp2k-deps
 mkdir -p "$deps"
 cp -R "$work/src/tools/toolchain/." "$deps/"
-mpi=$(wise_provider mpi)
-gcc=system
+# The later CP2K Features build in the same environment.
+cp "$(dirname "$0")/gnu-stack.sh" "$deps/gnu-stack.sh"
 # Without DBCSR its step filters an empty file, and grep's "no lines" status would end the toolchain.
 sed -i '/^  grep -v .*"$source_file" >> "$target_file"$/s/$/ || :/' "$deps/scripts/tool_kit.sh"
 # The toolchain's own -mtune=<target-cpu> leaves the instruction set at plain x86-64.
 sed -i 's/-mtune=${TARGET_CPU}/-march=x86-64-v3 -mtune=generic/' "$deps/scripts/stage0/setup_buildtools.sh"
-if wise_cuda; then
-    wise_nvfortran_env
-    # The static libraries end up in the shared libcp2k.
-    for flags in CFLAGS CXXFLAGS FFLAGS FCFLAGS F77FLAGS F90FLAGS; do eval "export $flags=\"\$$flags -fPIC\""; done
-    gcc=no
-    # Keep the exported NVHPC flags instead of the GNU defaults in the pinned toolchain.
-    sed -i '/^# Setup compiler flags/,/^export LDFLAGS=/c\export LDFLAGS="${TSANFLAGS}"' \
-        "$deps/scripts/stage0/setup_buildtools.sh"
-    sed -i 's/ -g1"/ -g"/g' "$deps/scripts/stage3/install_libint.sh"
+if cp2k_gnu_stack; then
+    cp2k_gnu_env
+    # shellcheck disable=SC2046
+    set -- $(cp2k_gnu_toolchain_args)
+else
+    set -- --with-"$(wise_provider mpi)"=system --with-fftw=system --with-openblas=system --with-scalapack=system
+    export CPATH="$WISE_PREFIX/include" LIBRARY_PATH="$WISE_PREFIX/lib"
 fi
-set -- --target-cpu=haswell --with-gcc="$gcc" --with-cmake=system --with-"$mpi"=system --with-fftw=system \
-    --with-openblas=system --with-scalapack=system --with-libxc=install --with-libint=install \
+set -- --target-cpu=haswell --with-gcc=system --with-cmake=system "$@" --with-libxc=install --with-libint=install \
     --with-libxs=no --with-libxsmm=no --with-dbcsr=no --with-plumed=no --with-tblite=no --with-elpa=no --with-hdf5=no \
     --with-cosma=no --with-spfft=no --with-spla=no --with-sirius=no --with-gsl=no --with-spglib=no --with-libvori=no
 # The toolchain downloads with wget, which gives up on HTTP errors and refused connections.
 printf '%s\n' 'tries = 5' 'waitretry = 30' 'timeout = 60' 'retry_connrefused = on' \
     'retry_on_http_error = 429,500,502,503,504' > "$deps/wgetrc"
-(cd "$deps" && WGETRC="$deps/wgetrc" CPATH="$WISE_PREFIX/include" LIBRARY_PATH="$WISE_PREFIX/lib" \
-    ./install_cp2k_toolchain.sh -j "$(nproc)" "$@")
+(cd "$deps" && WGETRC="$deps/wgetrc" ./install_cp2k_toolchain.sh -j "$(wise_build_jobs)" "$@")
 for library in libint libxc; do
     ls "$deps/install/$library"-*/install_successful >/dev/null || wise_fail "$library was not built"
 done

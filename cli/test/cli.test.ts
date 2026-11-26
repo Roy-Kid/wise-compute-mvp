@@ -93,6 +93,24 @@ describe("build", () => {
     assert.deepEqual(calls.slice(-2), [["image", "tag", id, "research:local"], ["image", "rm", staging]]);
   });
 
+  test("isolates temporary Dev Container files during parallel builds", async () => {
+    const tempRoots: string[] = [];
+    const execute: Run = async (program, args, options) => {
+      if (program === process.execPath) {
+        const temp = options?.env?.TMPDIR;
+        assert.ok(temp && existsSync(temp));
+        assert.ok(!tempRoots.includes(temp));
+        tempRoots.push(temp);
+      }
+      return args[1] === "inspect" ? ok(local) : ok();
+    };
+    const builder = new DevContainerBuilder(new Docker(execute), execute);
+    await Promise.all(["cpu", "cuda"].map(variant =>
+      builder.build({ workspace: ".", output: { image: `research:${variant}` } })));
+    assert.equal(tempRoots.length, 2);
+    for (const temp of tempRoots) assert.ok(!existsSync(temp));
+  });
+
   test("selects a platform variant only when the default one differs, so older Docker can inspect", async () => {
     const inspects: (readonly string[])[] = [];
     const inspecting = (first: typeof local) => new Docker(async (_program, args) => {

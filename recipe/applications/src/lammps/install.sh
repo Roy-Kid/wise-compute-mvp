@@ -16,7 +16,12 @@ extra=$(list "${EXTRAPACKAGES:-}")
 disable=$(list "${DISABLEPACKAGES:-}")
 case "$variant" in
     cpu) ;;
-    cuda) wise_cuda || wise_fail "variant=cuda needs the CUDA base image" ;;
+    cuda)
+        wise_cuda || wise_fail "variant=cuda needs the CUDA base image"
+        . "$(dirname "$0")/lammps-cuda.sh"
+        cuda_link_flags=$(lammps_cuda_link_flags)
+        lammps_cuda_file_table_available /proc/sys/fs/file-nr
+        ;;
     *) wise_fail "unknown variant $variant" ;;
 esac
 [ -z "$part" ] || [ "$variant" = cuda ] || wise_fail "part needs variant=cuda"
@@ -31,8 +36,7 @@ for package in KOKKOS GPU; do
 done
 [ "$variant" = cpu ] || ! member INTEL "$extra" || wise_fail "INTEL cannot be built by nvcc_wrapper (variant=cuda)"
 
-# Packages backed by a Feature (PACKAGE:feature; the Feature installs lib<feature>). Requested through
-# extraPackages, they need that Feature; recipe/test/recipe.test.ts reads this line.
+# Packages requested through extraPackages require their backing Feature (PACKAGE:feature).
 providers="PLUMED:plumed H5MD:hdf5 NETCDF:netcdf"
 # Packages that fetch third-party code from the network (cmake/Modules/Packages of the pinned commit):
 # always off, unless backed by a Feature above and requested.
@@ -107,9 +111,13 @@ EOF
     chmod +x "$WISE_WORK/bin/nvcc_wrapper"
     # KOKKOS with the CUDA backend (OpenMP on the host); its FFTs run on cuFFT from the HPC SDK math_libs.
     # INTEL relies on host compiler flags nvcc does not accept.
+    # lmp links against liblammps, which needs the CUDA driver. The SDK supplies it on GPU-less builders.
+    lammps_cuda_link_probe "$WISE_WORK/bin/nvcc_wrapper" "$cuda_link_flags" \
+        || wise_fail "CUDA driver link failed in the compiler preflight"
+    export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$CUDA_HOME/compat"
     set -- "$@" -DPKG_KOKKOS=ON -DKokkos_ENABLE_CUDA=ON -DKokkos_ENABLE_OPENMP=ON -DKokkos_ARCH_"$arch"=ON \
         -DFFT_KOKKOS=CUFFT -DCUDAToolkit_ROOT="$CUDA_HOME" -DCMAKE_PREFIX_PATH="${NVHPC_ROOT:?}/math_libs;$WISE_PREFIX" \
-        -DCMAKE_CXX_COMPILER="$WISE_WORK/bin/nvcc_wrapper" -DPKG_INTEL=OFF
+        -DCMAKE_CXX_COMPILER="$WISE_WORK/bin/nvcc_wrapper" "-DCMAKE_EXE_LINKER_FLAGS=$cuda_link_flags" -DPKG_INTEL=OFF
 else
     set -- "$@" -DPKG_KOKKOS=OFF -DCMAKE_PREFIX_PATH="$WISE_PREFIX"
 fi
@@ -126,8 +134,12 @@ on() { grep -q "^$1:BOOL=ON$" "$cache"; }
 on PKG_KSPACE || wise_fail "KSPACE is required"
 grep -q '^FFT:STRING=FFTW3$' "$cache" || wise_fail "KSPACE must use FFTW3 from the fftw Feature"
 ! on PKG_GPU || wise_fail "the native GPU package is never built; use variant=cuda (KOKKOS)"
-if [ "$variant" = cuda ]; then on PKG_KOKKOS && on Kokkos_ENABLE_CUDA || wise_fail "variant=cuda needs KOKKOS with CUDA"
-else ! on PKG_KOKKOS || wise_fail "variant=cpu does not build KOKKOS"; fi
+if [ "$variant" = cuda ]; then
+    on PKG_KOKKOS && on Kokkos_ENABLE_CUDA || wise_fail "variant=cuda needs KOKKOS with CUDA"
+    on "Kokkos_ARCH_$arch" || wise_fail "KOKKOS CUDA architecture $arch is off"
+else
+    ! on PKG_KOKKOS || wise_fail "variant=cpu does not build KOKKOS"
+fi
 enabled=
 for entry in $providers; do enabled="$enabled ${entry%%:*}"; done
 for package in $downloading $enabled; do
@@ -141,7 +153,14 @@ if [ -n "$part" ]; then
     objects=$WISE_PREFIX/share/lammps/build-objects
     mkdir -p "$objects"
 fi
-LAMMPS_SRC=$src LAMMPS_BUILD=$build LAMMPS_OBJECTS=$objects LAMMPS_PART=$part cmake --build "$build" -j"$(nproc)"
+if [ "$variant" = cuda ]; then
+    lammps_cuda_file_table_available /proc/sys/fs/file-nr
+    jobs=$(lammps_cuda_build_jobs)
+    LAMMPS_SRC=$src LAMMPS_BUILD=$build LAMMPS_OBJECTS=$objects LAMMPS_PART=$part \
+        lammps_cuda_build "$build" "$jobs" "$WISE_WORK/cuda-build.log"
+else
+    cmake --build "$build" -j"$(wise_build_jobs)"
+fi
 [ -z "$part" ] || exit 0
 cmake --install "$build" --strip
 ldconfig

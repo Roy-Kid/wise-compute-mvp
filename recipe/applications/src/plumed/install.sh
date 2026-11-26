@@ -11,7 +11,7 @@ wise_fetch_tar https://github.com/plumed/plumed2/releases/download/v2.10.2/plume
     42f097dd148275bbcd72034815655391d4743be06d1cea500ef848c84b8462dc src
 cd src
 ./configure --prefix="$WISE_PREFIX" CC="$WISE_MPI_ROOT/bin/mpicc" CXX="$WISE_MPI_ROOT/bin/mpicxx" --disable-doc
-make -j"$(nproc)"
+make -j"$(wise_build_jobs)"
 make install
 wise_mpi_linked "$WISE_PREFIX/lib/libplumed.so"
 wise_done

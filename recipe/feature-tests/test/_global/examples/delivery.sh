@@ -1,19 +1,23 @@
 #!/bin/sh
-# Acceptance for a delivered image, run inside it as an unprivileged user:
-#   docker run --rm -i --user 65534:65534 --network none --tmpfs /tmp:mode=1777 --shm-size=2g \
-#     --entrypoint /bin/sh IMAGE -s cpu|cuda < recipe/delivery/verify.sh
-# For cuda, run on a GPU node with --gpus 1 to exercise the GPU paths; WISE_VERIFY_GPU=0 skips them.
+# Delivery checks run by the Dev Container CLI full-image scenario.
 set -eu
 
-# The script arrives on stdin, which mpirun would read; the braces make sh parse all of it first.
-{
-variant=${1:?usage: verify.sh cpu|cuda}
+variant=${1:?usage: delivery.sh cpu|cuda}
 case "$variant" in cpu|cuda) ;; *) echo "unknown variant: $variant" >&2; exit 2 ;; esac
 : "${WISE_VENV:?WISE_VENV is missing; the python Feature is not installed}"
 wise_id=verify
 . /usr/local/lib/devcontainer-features/feature.sh
 
 fail() { echo "verify: $*" >&2; exit 1; }
+# On the CUDA base CP2K runs on a GNU stack and MPI of its own, reached through the commands in /usr/local/bin.
+cp2k_program=/usr/local/bin/cp2k.psmp
+cp2k_stack=/usr/local/cp2k-deps
+if [ -e "$cp2k_stack/run-env.sh" ]; then
+    cp2k_program=$cp2k_stack/cp2k/bin/cp2k.psmp
+    cp2k_ldd() (. "$cp2k_stack/run-env.sh" && ldd "$cp2k_program")
+else
+    cp2k_ldd() { ldd "$cp2k_program"; }
+fi
 # An empty entry in a search path means the current directory.
 for path in "${LD_LIBRARY_PATH:-}" "${CPATH:-}" "${LIBRARY_PATH:-}" "$PATH"; do
     [ -z "$path" ] || case ":$path:" in *::*) fail "a search path includes the current directory: $path" ;; esac
@@ -58,18 +62,30 @@ for lib in /usr/local/lib/libelpa /usr/local/lib/libhdf5 /usr/local/lib/libscala
     ldd /usr/local/bin/pw.x | grep -q "$lib" || fail "pw.x does not link $lib"
 done
 for lib in libelpa_openmp libhdf5; do
-    ldd /usr/local/bin/cp2k.psmp | grep -q "$lib" || fail "cp2k.psmp does not link $lib"
+    cp2k_ldd | grep -q "$lib" || fail "cp2k.psmp does not link $lib"
 done
 # One OpenMP runtime per process.
-for binary in /usr/local/bin/lmp /usr/local/bin/pw.x /usr/local/bin/cp2k.psmp; do
+for binary in /usr/local/bin/lmp /usr/local/bin/pw.x; do
     [ "$(ldd "$binary" | grep -c 'libgomp\|libnvomp')" -le 1 ] || fail "$binary loads two OpenMP runtimes"
 done
+[ "$(cp2k_ldd | grep -c 'libgomp\|libnvomp')" -le 1 ] || fail "cp2k.psmp loads two OpenMP runtimes"
 
 # Every MPI consumer uses the selected provider's library and launcher.
-for binary in /usr/local/bin/lmp /usr/local/bin/pw.x /usr/local/bin/cp2k.psmp \
+for binary in /usr/local/bin/lmp /usr/local/bin/pw.x \
     "$(MPI4PY_RC_INITIALIZE=0 "$WISE_VENV/bin/python" -c 'import mpi4py.MPI as m; print(m.__file__)')"; do
     wise_mpi_linked "$binary"
 done
+if [ -e "$cp2k_stack/run-env.sh" ]; then
+    # CP2K's stack stays out of the image's PATH and loader cache, and loads nothing of the image's MPI.
+    cp2k_ldd | awk '$1 ~ /^libmpi[.]so/ { print $3 }' | grep -q "^$cp2k_stack/install/openmpi-" \
+        || fail "cp2k.psmp does not load the MPI of its own stack"
+    ! cp2k_ldd | grep -q -e "$WISE_MPI_ROOT" -e /hpcx || fail "cp2k.psmp loads the image's MPI stack"
+    ! ldconfig -p | grep -q "$cp2k_stack/" || fail "CP2K's stack is in the loader cache"
+    case ":$PATH:" in *":$cp2k_stack/"*) fail "CP2K's stack is in PATH" ;; esac
+    command -v cp2k-mpirun
+else
+    wise_mpi_linked "$cp2k_program"
+fi
 test "$(readlink -f "$(command -v mpirun)")" = "$(readlink -f "$WISE_MPI_ROOT/bin/mpirun")"
 
 mpirun -n 2 "$WISE_VENV/bin/python" -c '
@@ -80,10 +96,16 @@ if level not in (MPI.THREAD_SERIALIZED, MPI.THREAD_MULTIPLE):
 assert MPI.COMM_WORLD.allreduce(1) == 2
 '
 # COSMA, SIRIUS and LIBXSMM are static, so ask CP2K itself.
-cp2k_version=$(cp2k.psmp --version)
-echo "$cp2k_version"
+cp2k_version=$(mktemp)
+if [ "$variant" = cuda ] && [ "${WISE_VERIFY_GPU:-1}" != 1 ]; then
+    # A CUDA build of CP2K stops at start-up without a device: read the feature names from its library.
+    strings -a "$(cp2k_ldd | awk '/libcp2k.*=>/ {print $3; exit}')" > "$cp2k_version"
+else
+    cp2k.psmp --version > "$cp2k_version"
+    cat "$cp2k_version"
+fi
 for feature in cosma sirius libxsmm spglib; do
-    echo "$cp2k_version" | grep -qw "$feature" || fail "CP2K lacks $feature"
+    grep -qw "$feature" "$cp2k_version" || fail "CP2K lacks $feature"
 done
 
 work=$(mktemp -d)
@@ -128,7 +150,8 @@ run 50
 print "$(pe:%.12f)" file pe-${ranks}.txt
 LAMMPS
 # Numerical consistency: the same trajectory on 1 and 2 ranks (different decompositions) agrees.
-lmp -var ranks 1 -in in.lj -log none -screen none
+# Under mpirun also for one rank: a singleton start can hang in a container without a network.
+mpirun -n 1 lmp -var ranks 1 -in in.lj -log none -screen none
 mpirun -n 2 lmp -var ranks 2 -in in.lj -log none -screen none
 awk 'NR == FNR { a = $1; next } { d = a - $1; if (d < 0) d = -d; s = a < 0 ? -a : a; exit !(d <= 1e-8 * s) }' \
     pe-1.txt pe-2.txt || fail "LAMMPS energies differ between 1 and 2 ranks: $(cat pe-1.txt) vs $(cat pe-2.txt)"
@@ -158,7 +181,7 @@ mpirun -n 2 lmp -in in.pppm -log none -screen none
 sed 's/^run 20$/dump h5 all h5md 10 traj.h5 position\ndump nc all netcdf 10 traj.nc id type x y z\nrun 20/' in.pppm > in.io
 mpirun -n 2 lmp -in in.io -log none -screen none
 test -s traj.h5 && test -s traj.nc
-lmp -h > lammps-help.txt
+mpirun -n 1 lmp -h > lammps-help.txt
 for package in KSPACE H5MD NETCDF OPENMP; do grep -qw "$package" lammps-help.txt || fail "LAMMPS lacks $package"; done
 grep -q 'FFT library *= *FFTW3' lammps-help.txt || fail "LAMMPS KSPACE does not use FFTW3"
 ! grep -qw INTEL lammps-help.txt || fail "INTEL is off by default"
@@ -168,17 +191,24 @@ if [ "$variant" = cpu ]; then
     exit
 fi
 grep -q 'KOKKOS package API:.*CUDA' lammps-help.txt
-grep -q 'KOKKOS FFT library *= *CUFFT' lammps-help.txt
+grep -q 'KOKKOS FFT library *= *cuFFT' lammps-help.txt
 ! grep -q 'GPU package API' lammps-help.txt || { echo "the native GPU package must not be built" >&2; exit 1; }
 ldd /usr/local/bin/pw.x | grep -q libcufft
 ! ldd /usr/local/bin/pw.x | grep -q libgomp || fail "the GPU pw.x loads GCC's OpenMP runtime"
-ldd /usr/local/bin/cp2k.psmp | grep -q libcudart
-for feature in offload_cuda dbcsr_acc spla_gemm_offloading; do
-    echo "$cp2k_version" | grep -qw "$feature" || fail "CP2K lacks $feature"
+# Check the linked CUDA objects even on a builder without a GPU.
+cp2k_library=$(cp2k_ldd | awk '/libcp2k.*=>/ {print $3; exit}')
+for binary in /usr/local/bin/pw.x /usr/local/lib/liblammps.so /usr/local/lib/libelpa_openmp.so \
+    "${cp2k_library:-$cp2k_program}"; do
+    cuobjdump --list-elf "$binary" > architectures.txt
+    grep -Eq '(^|[^[:alnum:]_])sm_120([^[:alnum:]_]|$)' architectures.txt || fail "$binary lacks sm_120 device code"
 done
-! echo "$cp2k_version" | grep -q 'no_offload_' || fail "CP2K keeps a GPU path on the CPU"
+cp2k_ldd | grep -q libcudart
+for feature in offload_cuda dbcsr_acc spla_gemm_offloading; do
+    grep -qw "$feature" "$cp2k_version" || fail "CP2K lacks $feature"
+done
+! grep -q 'no_offload_' "$cp2k_version" || fail "CP2K keeps a GPU path on the CPU"
 for lib in libcufft libcublas libcusolver; do
-    ldd /usr/local/bin/cp2k.psmp | grep -q "$lib" || fail "cp2k.psmp does not link $lib"
+    cp2k_ldd | grep -q "$lib" || fail "cp2k.psmp does not link $lib"
 done
 for lib in libcublas libcusolver; do
     ldd /usr/local/lib/libelpa_openmp.so | grep -q "$lib" || fail "ELPA does not link $lib"
@@ -188,7 +218,8 @@ echo "$ompi" | grep -Eq '(^|:)mpi_built_with_cuda_support:value:true$' || fail "
 nvidia-smi -L
 driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1)
 [ "${driver%%.*}" -ge 575 ] || fail "CUDA delivery requires NVIDIA driver 575 or newer (found $driver)"
+capability=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -1)
+[ "$capability" = 12.0 ] || fail "expected compute capability 12.0 (found $capability)"
 # Run on the device: KOKKOS must initialize the GPU and finish both runs, PPPM with cuFFT.
-lmp -k on g 1 -sf kk -var ranks 1 -in in.lj -log none -screen none
-lmp -k on g 1 -sf kk -in in.pppm -log none -screen none
-} </dev/null
+mpirun -n 1 lmp -k on g 1 -sf kk -var ranks 1 -in in.lj -log none -screen none
+mpirun -n 1 lmp -k on g 1 -sf kk -in in.pppm -log none -screen none

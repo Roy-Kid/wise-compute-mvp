@@ -27,9 +27,10 @@ wise_require_if "${ELPA:-false}" elpa
 wise_done
 ```
 
-- 无条件依赖写入 `dependsOn`，条件依赖和能力提供者写入 `installsAfter`。依赖指向同层或下层，以 `harbor.will/wise/wise-compute-features/<层>/<id>:<主版本>` 引用。`npm test` 校验声明及两套交付的安装顺序。
+- 无条件依赖写入 `dependsOn`，条件依赖和能力提供者写入 `installsAfter`。依赖指向同层或下层，以 `harbor.will/wise/wise-compute-features/<层>/<id>:<主版本>` 引用。
 - CPU 交付通过 Feature 安装 Open MPI，使用 UCX 和 libfabric。可选 MPICH 使用 libfabric。
 - 基座通过 `WISE_BASE_<能力>` 声明已有能力。CUDA 设置 `WISE_BASE_MPI=openmpi` 和 `WISE_MPI_ROOT`，让 Feature 复用 SDK 自带的 HPC-X 和 UCX。重复选中 MPI 提供者会报错。使用 MPI 的 CUDA 版 Fortran 库按同一个 `nvfortran` ABI 构建。
+- CUDA 版 CP2K 是例外。它需要 gfortran（nvfortran 编不过 DBCSR），而 HPC-X 只提供 nvfortran 的 MPI Fortran 模块，所以 CP2K 的工具链在 `/usr/local/cp2k-deps` 自建一套 GNU 依赖和 Open MPI。这套依赖不进默认 `PATH` 和动态库缓存，`cp2k.psmp` 等命令自行设置环境，并行运行用 `cp2k-mpirun`；用镜像的 `mpirun` 启动会被拒绝。
 - CUDA、NVIDIA HPC SDK 和 GDRCopy 由 CUDA 基座提供。CPU 指令集基线是 x86-64-v3，每个进程只加载一套 OpenMP 运行时。
 - 修改 Feature 后递增其 `version`，升主版本时更新引用。发布和本地构建见 [CLI 用法](../docs/cli.md)。
 
@@ -39,19 +40,36 @@ wise_done
 
 | 应用 | CPU | CUDA |
 | --- | --- | --- |
-| LAMMPS | MPI、OPENMP、FFTW3、H5MD、NETCDF | 加 KOKKOS（`AMPERE80`）和 cuFFT |
-| Quantum ESPRESSO | GCC、MPI、OpenMP、ScaLAPACK、ELPA、HDF5 | nvfortran、OpenACC、GPU-aware MPI，目标为 A100 和 H100 |
-| CP2K | ELPA、HDF5、`largeSystems` | 同样启用 ELPA、HDF5 和 `largeSystems`，使用 NVHPC 构建 A100 版 |
+| LAMMPS | MPI、OPENMP、FFTW3、H5MD、NETCDF | 加 KOKKOS（`BLACKWELL120`）和 cuFFT |
+| Quantum ESPRESSO | GCC、MPI、OpenMP、ScaLAPACK、ELPA、HDF5 | nvfortran、OpenACC、GPU-aware MPI，编译 `sm_120` |
+| CP2K | ELPA、HDF5、`largeSystems` | 使用 GCC 和 CUDA 构建，启用 ELPA、HDF5 和 `largeSystems`，编译 `sm_120`；运行在自带的 GNU 栈和 Open MPI 上，用 `cp2k-mpirun` 启动 |
 
 应用的选项及默认值见各自的 `devcontainer-feature.json`。LAMMPS 始终启用 KSPACE，默认关闭 INTEL 和需联网下载代码的包。启用 `PLUMED`、`H5MD` 或 `NETCDF` 时需要对应 Feature。
 
 两套交付都安装与 `wise-platform` 材料 CPU 清单同版本的 NumPy、SciPy、pandas、Matplotlib、ASE、pymatgen、spglib、Phonopy、Phono3py、PySCF、pycalphad、MDAnalysis 和 h5py。传递依赖按 Ubuntu 24.04 的 CPython 3.12／linux/amd64 锁定 wheel 和 SHA-256，验收包含离线导入及 HDF5 读写。[Python 依赖锁](applications/src/materials-python/requirements.txt)
 
-两套交付默认设置 `--shm-size=16g`、`--cap-add=SYS_PTRACE` 和 `--ulimit memlock=-1:-1`。使用 InfiniBand/RoCE 时另加 `--device=/dev/infiniband --network=host`。GPUDirect RDMA 还需宿主机加载 `nvidia-peermem` 和 `gdrdrv`。OpenMP 默认将线程绑在相邻核心，每个 rank 默认 1 个线程。
+两套交付默认设置 `--shm-size=16g`、`--cap-add=SYS_PTRACE` 和 `--ulimit memlock=-1:-1`。使用 InfiniBand/RoCE 时另加 `--device=/dev/infiniband --network=host`。GPUDirect RDMA 还需宿主机加载 `nvidia-peermem` 和 `gdrdrv`。OpenMP 默认将线程绑在相邻核心，每个 rank 默认 1 个线程。Feature 源码编译按可用 CPU 决定并行度，每个编译任务最多使用 32 个作业。
 
-CUDA 交付验收要求 NVIDIA 驱动主版本至少为 575。交付主要针对 A100，可为 H100 单独配置 LAMMPS 的 `gpuArch: HOPPER90`、QE 的 `cudaCC: 90`、`cp2k-toolchain` 的 `gpuVersion: H100` 和 ELPA 的 `cudaArch: 90`。
+CUDA full 镜像面向 RTX PRO 5000 Blackwell（计算能力 12.0）。LAMMPS、QE、CP2K 和 ELPA 都编译 `sm_120`，离线验收检查四者的设备代码。设备验收要求 NVIDIA 驱动主版本至少为 575。[NVIDIA GPU 计算能力](https://developer.nvidia.com/cuda/gpus)
 
 ## 验收与基准
+
+构建机权限、代理、Feature 测试和 CUDA 编译错误见 [镜像排障](../docs/troubleshooting.md)。
+
+在有 Docker 和 Buildx 的构建机上运行分级 Feature 测试。
+
+```bash
+npm ci
+npm test
+npm run test:features -- cpu openmp
+npm run test:features -- cpu packmol
+npm run test:features -- cpu all
+npm run test:features -- cuda all
+```
+
+Scenario 和断言脚本放在 `feature-tests/test/_global/`，遵循 Dev Container Feature Starter 的结构。`npm run test:features` 将各层的源码整理到临时 `src/`，再逐个调用官方 `devcontainer features test --global-scenarios-only`。断言通过 Dev Container CLI 提供的 `check` 和 `reportResults` 执行。[Feature Starter](https://github.com/devcontainers/feature-starter) · [官方测试文档](https://github.com/devcontainers/cli/blob/main/docs/features/test.md)
+
+每个 scenario 使用交付配方锁定的基础镜像。首个 scenario 安装 Core 和 OpenMP，运行 C、C++ 和 Fortran 双线程归约。前置 scenario 通过后，再运行带有对应依赖的应用 scenario。可单独选择 `mpi`、`libraries`、`python`、`wannier90`、`lammps`、`quantum-espresso` 或 `cp2k`。算例以非 root 用户离线运行，校验数值和输出文件。`npm test` 检查所有本地 Feature 和两套交付的 Feature 选项均有 scenario 覆盖。`FEATURE_TEST_BASE_IMAGE` 可指定同一基础镜像的 Harbor 引用，`FEATURE_TEST_APT_SNAPSHOT=''` 可临时使用常规 APT 源。
 
 构建时可用 `--base-image` 切到 Harbor 里的兼容上游镜像。CUDA 上游仍需提供 NVIDIA HPC SDK 25.7、CUDA 12.9 和 HPC-X。
 
@@ -60,14 +78,18 @@ npx wisehub image build --workspace-folder recipe/base/cpu --platform linux/amd6
   --base-image harbor.will/docker.io/library/ubuntu:24.04 --image wise-compute:base-cpu
 ```
 
-在仓库根目录构建并在 GPU 节点验收 CUDA 交付。
+在仓库根目录构建，并用同一套 Dev Container scenario 验收完整镜像。
 
 ```bash
+npx wisehub image build --workspace-folder recipe/delivery/cpu --local-features recipe --platform linux/amd64 --image wise-compute:materials-cpu
 npx wisehub image build --workspace-folder recipe/delivery/cuda --local-features recipe --platform linux/amd64 --image wise-compute:materials-cuda
-docker run --rm -i --gpus 1 --shm-size=16g --user 65534:65534 --network none --tmpfs /tmp:mode=1777 \
-  --entrypoint /bin/sh wise-compute:materials-cuda -s cuda < recipe/delivery/verify.sh
+npm run test:delivery -- cpu wise-compute:materials-cpu
+npm run test:delivery -- cuda wise-compute:materials-cuda
+FEATURE_TEST_GPU=1 npm run test:delivery -- cuda wise-compute:materials-cuda
 ```
 
-[`verify.sh`](delivery/verify.sh) 检查工具、链接、互连、绑核、并行 I/O 和 LAMMPS 数值一致性。CPU 版传入 `cpu`，并省略 `--gpus`。无 GPU 的 CI 以 `WISE_VERIFY_GPU=0` 跳过 CUDA 设备验收。
+完整镜像 scenario 检查工具、链接、互连、绑核和并行 I/O，并重跑 Feature 场景中的应用算例。CUDA 默认执行离线验收。在 GPU 节点设置 `FEATURE_TEST_GPU=1` 后，额外执行 LAMMPS、QE 和 CP2K 的设备算例。
+
+CUDA 的 OpenMP 场景检查文件句柄、兼容驱动链接，以及 NVCC 和 nvfortran 生成的 `sm_120` 设备代码。LAMMPS 在全量编译前用自己的 NVCC wrapper 重跑链接检查，并把 CUDA 编译控制在 12 路并行。
 
 [`benchmark.sh`](delivery/benchmark.sh) 在镜像内运行 LAMMPS 或给定的 QE/CP2K 算例，输出耗时、加速比和并行效率 CSV。用 `--hostfile` 测跨节点，用 `--threads` 设置每个 rank 的线程数，用 `--gpu` 测 KOKKOS。

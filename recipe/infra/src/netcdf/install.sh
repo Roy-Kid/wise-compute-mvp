@@ -15,7 +15,7 @@ cd src
     CPPFLAGS="-I$WISE_PREFIX/include" LDFLAGS="-L$WISE_PREFIX/lib" \
     --enable-netcdf-4 --enable-parallel4 --disable-dap --disable-byterange --disable-nczarr \
     --disable-libxml2 --disable-testsets --disable-utilities
-make -j"$(nproc)"
+make -j"$(wise_build_jobs)"
 make install-strip
 [ "$("$WISE_PREFIX/bin/nc-config" --has-parallel4)" = yes ] || wise_fail "NetCDF-4 parallel I/O is off"
 wise_done

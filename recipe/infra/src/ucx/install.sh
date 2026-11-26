@@ -18,7 +18,7 @@ if wise_cuda; then
     modules="$modules cuda cuda_gdrcopy"
 fi
 ./contrib/configure-release "$@"
-make -j"$(nproc)"
+make -j"$(wise_build_jobs)"
 make install-strip
 for module in $modules; do
     test -e "$WISE_PREFIX/lib/ucx/libuct_$module.so" || wise_fail "transport $module was not built"

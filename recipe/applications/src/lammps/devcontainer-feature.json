@@ -20,7 +20,8 @@
         "AMPERE80",
         "AMPERE86",
         "ADA89",
-        "HOPPER90"
+        "HOPPER90",
+        "BLACKWELL120"
       ],
       "default": "AMPERE80",
       "description": "Kokkos GPU architecture of the cuda variant (Kokkos_ARCH_<value>), one per build; PTX is embedded too, so newer GPUs run after a JIT compile at first launch."

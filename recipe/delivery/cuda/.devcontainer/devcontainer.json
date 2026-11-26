@@ -1,5 +1,5 @@
 {
-  "name": "WiseHub materials CUDA",
+  "name": "WiseHub materials CUDA for RTX PRO 5000 Blackwell",
   // Builds on the cuda base tier; every Feature is a published reference (see recipe/README.md).
   "build": {
     "dockerfile": "../../../base/cuda/.devcontainer/Dockerfile",
@@ -19,15 +19,14 @@
     // Parallel I/O and the distributed eigensolver for large systems.
     "harbor.will/wise/wise-compute-features/infra/hdf5:2": {},
     "harbor.will/wise/wise-compute-features/infra/netcdf:2": {},
-    "harbor.will/wise/wise-compute-features/infra/elpa:2": { "cudaArch": "80" },
+    "harbor.will/wise/wise-compute-features/infra/elpa:2": { "cudaArch": "120" },
     "harbor.will/wise/wise-compute-features/applications/materials-python:2": {},
     "harbor.will/wise/wise-compute-features/applications/mpi4py:2": {},
-    // GPU builds against the HPC SDK of the CUDA base image: tuned for A100 (sm_80); QE also carries
-    // H100 code (sm_90), Kokkos and CP2K embed sm_80 PTX that newer GPUs JIT-compile.
-    "harbor.will/wise/wise-compute-features/applications/lammps:3": { "variant": "cuda", "gpuArch": "AMPERE80", "extraPackages": "H5MD,NETCDF" },
-    "harbor.will/wise/wise-compute-features/applications/quantum-espresso:3": { "cudaCC": "80,90", "elpa": true, "hdf5": true },
+    // All GPU Features target the RTX PRO 5000 Blackwell (sm_120).
+    "harbor.will/wise/wise-compute-features/applications/lammps:3": { "variant": "cuda", "gpuArch": "BLACKWELL120", "extraPackages": "H5MD,NETCDF" },
+    "harbor.will/wise/wise-compute-features/applications/quantum-espresso:3": { "cudaCC": "120", "elpa": true, "hdf5": true },
     "harbor.will/wise/wise-compute-features/applications/cp2k-integrals:2": {},
-    "harbor.will/wise/wise-compute-features/applications/cp2k-toolchain:2": { "gpuVersion": "A100", "elpa": true, "hdf5": true, "largeSystems": true },
+    "harbor.will/wise/wise-compute-features/applications/cp2k-toolchain:2": { "gpuVersion": "RTXPRO5000", "elpa": true, "hdf5": true, "largeSystems": true },
     "harbor.will/wise/wise-compute-features/applications/cp2k:4": {},
     "harbor.will/wise/wise-compute-features/infra/openmpi-defaults:2": {},
     "harbor.will/wise/wise-compute-features/applications/wannier90:2": {},

@@ -4,6 +4,7 @@ WiseHub 将 Dev Container 工作区构建为镜像，按 digest 推拉 OCI 镜�
 
 - [CLI 用法](docs/cli.md)
 - [镜像配方、运行与验收](recipe/README.md)
+- [镜像构建和验收排障](docs/troubleshooting.md)
 - [待办](docs/roadmap.md)
 
 ## 本地开发
@@ -13,7 +14,9 @@ WiseHub 将 Dev Container 工作区构建为镜像，按 digest 推拉 OCI 镜�
 ```bash
 npm ci
 npm test
+npm run test:features -- cpu openmp
 npx wisehub image build --workspace-folder recipe/delivery/cpu --local-features recipe --platform linux/amd64 --image wise-compute:materials-cpu
+npm run test:delivery -- cpu wise-compute:materials-cpu
 ```
 
 ## CI/CD

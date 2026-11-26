@@ -2,8 +2,8 @@
 #   wise_id=<id>
 #   . /usr/local/lib/devcontainer-features/feature.sh
 # and ends with wise_done. Features learn about each other only through the registry below, by id or by
-# capability, never by probing another Feature's files; their requirements are the wise_require* calls,
-# which recipe/test/recipe.test.ts reads to check dependsOn/installsAfter and every delivery.
+# capability, never by probing another Feature's files. The wise_require* calls check each Feature's
+# prerequisites before it builds.
 # shellcheck shell=sh
 
 WISE_PREFIX=/usr/local
@@ -105,6 +105,11 @@ wise_mpi_linked() { # binary [other library patterns...]
 }
 
 # --- Toolchains -------------------------------------------------------------------------------------
+wise_build_jobs() {
+    # The image's OpenMP settings are for running the compiled software.
+    env -u OMP_NUM_THREADS OMP_THREAD_LIMIT=32 nproc
+}
+
 wise_cuda() { [ -n "${CUDA_HOME:-}" ]; } # whether the base image is the CUDA one
 wise_nvfortran_env() { # MPI wrappers drive the HPC SDK compilers; -tp matches the x86-64-v3 baseline
     command -v nvfortran >/dev/null || wise_fail "nvfortran needs the CUDA base image with the NVIDIA HPC SDK"

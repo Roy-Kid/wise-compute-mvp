@@ -16,7 +16,7 @@ cmake -S "src/hdf5-$version" -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL
     -DBUILD_STATIC_LIBS=OFF -DBUILD_TESTING=OFF -DHDF5_BUILD_EXAMPLES=OFF -DHDF5_BUILD_CPP_LIB=OFF \
     -DHDF5_BUILD_JAVA=OFF -DHDF5_ENABLE_PARALLEL=ON -DHDF5_BUILD_FORTRAN=ON -DHDF5_ENABLE_ZLIB_SUPPORT=ON \
     -DCMAKE_C_COMPILER="$WISE_MPI_ROOT/bin/mpicc" -DCMAKE_Fortran_COMPILER="$WISE_MPI_ROOT/bin/mpifort"
-cmake --build build -j"$(nproc)"
+cmake --build build -j"$(wise_build_jobs)"
 cmake --install build --strip
 grep -q 'define H5_HAVE_PARALLEL 1' "$WISE_PREFIX/include/H5pubconf.h" || wise_fail "HDF5 was built without MPI-IO"
 wise_done

@@ -51,7 +51,7 @@ if (target && (labels?.["org.opencontainers.image.revision"] !== commit || label
 }
 writeFileSync("image.txt", `${info.Id} ${info.Size}\n`);
 
-verifyImage(docker.binary, image, variant);
+verifyImage(image, variant);
 
 if (target) {
   const pushed = await registry.push(image, target, { immutable: true });
@@ -66,7 +66,7 @@ if (target) {
     aptSnapshot: arg("APT_SNAPSHOT"),
     imageId: info.Id,
     imageSize: info.Size,
-    verify: variant === "cuda" ? "passed without GPU device run" : "passed",
+    verify: variant === "cuda" && process.env.FEATURE_TEST_GPU !== "1" ? "passed without GPU device run" : "passed",
     verifiedAt: new Date().toISOString(),
   };
   const output = JSON.stringify(record, null, 2);

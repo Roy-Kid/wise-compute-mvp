@@ -17,6 +17,6 @@ fi
 cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$WISE_PREFIX" \
     -DBUILD_SHARED_LIBS=ON -DSCALAPACK_BUILD_TESTS=OFF -DBLA_VENDOR=OpenBLAS \
     -DCMAKE_C_COMPILER="$WISE_MPI_ROOT/bin/mpicc" -DCMAKE_Fortran_COMPILER="$WISE_MPI_ROOT/bin/mpifort"
-cmake --build build -j"$(nproc)"
+cmake --build build -j"$(wise_build_jobs)"
 cmake --install build --strip
 wise_done
