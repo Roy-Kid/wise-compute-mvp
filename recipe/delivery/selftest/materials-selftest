@@ -16,21 +16,21 @@ set -u
 
 here=$(dirname "$(readlink -f "$0")")
 
-# name | seconds | needs: cmd:PROGRAM or py:MODULE | device: always, or cuda (needs a GPU in a CUDA image)
+# name | seconds | needs: cmd:PROGRAM, any:PROGRAM,PROGRAM or py:MODULE | device: always, or cuda (needs a GPU in a CUDA image)
 tests='
 gpu|60|cmd:nvidia-smi|always
 openmp|300|cmd:gcc cmd:g++ cmd:gfortran|
 toolchains|300|cmd:python3 cmd:conda cmd:uv cmd:node cmd:npm cmd:cargo cmd:rustc|
 mpi|300|cmd:mpicc cmd:mpirun|
 libraries|300|cmd:mpicc cmd:mpirun cmd:nc-config cmd:h5pcc cmd:pkg-config|
-python|300|cmd:python3 cmd:mpirun py:ase py:pymatgen py:mpi4py|
+python|300|cmd:python3 py:ase py:pymatgen|
 packmol|300|cmd:packmol|
 multiwfn|300|cmd:Multiwfn|
 wannier90|300|cmd:wannier90.x|
 plumed|300|cmd:plumed|
-lammps|300|cmd:lmp cmd:mpirun|
-quantum-espresso|300|cmd:pw.x cmd:ld1.x cmd:mpirun|cuda
-cp2k|300|cmd:cp2k.psmp|cuda
+lammps|300|cmd:lmp|
+quantum-espresso|300|cmd:pw.x cmd:ld1.x|cuda
+cp2k|300|any:cp2k.psmp,cp2k.ssmp|cuda
 '
 field() { printf '%s\n' "$tests" | awk -F'|' -v name="$1" -v n="$2" '$1 == name { print $n }'; }
 names() { printf '%s\n' "$tests" | awk -F'|' 'NF { print $1 }'; }
@@ -49,6 +49,10 @@ skip_reason() {
     for need in $(field "$1" 3); do
         case "$need" in
             cmd:*) command -v "${need#cmd:}" > /dev/null || { echo "${need#cmd:} is not installed"; return; } ;;
+            any:*)
+                found=
+                for program in $(echo "${need#any:}" | tr ',' ' '); do ! command -v "$program" > /dev/null || found=1; done
+                [ -n "$found" ] || { echo "${need#any:} is not installed" | sed 's/,/ or /g'; return; } ;;
             py:*) python3 -c "import importlib.util, sys; sys.exit(importlib.util.find_spec('${need#py:}') is None)" \
                 2> /dev/null || { echo "the Python package ${need#py:} is not installed"; return; } ;;
         esac
@@ -57,7 +61,7 @@ skip_reason() {
 
 prepare() {
     [ -n "${HOME:-}" ] && [ -w "$HOME" ] || export HOME=/tmp
-    export OPENBLAS_NUM_THREADS=1 OMP_DYNAMIC=false SELFTEST_GPU=$gpu
+    export OMP_DYNAMIC=false SELFTEST_GPU=$gpu
     export SELFTEST_MIN_DRIVER="${SELFTEST_MIN_DRIVER:-}" SELFTEST_GPU_CAPABILITY="${SELFTEST_GPU_CAPABILITY:-}"
     # Open MPI: two-rank examples also run with access to one core, and as root in a container.
     export OMPI_MCA_rmaps_base_oversubscribe=1 PRTE_MCA_rmaps_default_mapping_policy=:oversubscribe

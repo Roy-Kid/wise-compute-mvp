@@ -6,13 +6,13 @@ import { devcontainerCli, devcontainerTempEnv } from "../cli/src/devcontainer.ts
 import { readStack, resolveLocal } from "../cli/src/features.ts";
 
 const [variant = "cpu", target = "all", ...extra] = process.argv.slice(2);
-if ((variant !== "cpu" && variant !== "cuda") || extra.length) {
-  throw new Error("usage: npm run test:features -- [cpu|cuda] [all|scenario]");
+if (!["cpu", "cuda", "smp"].includes(variant) || extra.length) {
+  throw new Error("usage: npm run test:features -- [cpu|cuda|smp] [all|scenario]");
 }
 
 const recipe = join(import.meta.dirname, "..", "recipe");
 const tests = join(recipe, "feature-tests", "test", "_global");
-const scenarioFile = variant === "cpu" ? "scenarios.json" : "scenarios.cuda.json";
+const scenarioFile = variant === "cpu" ? "scenarios.json" : `scenarios.${variant}.json`;
 const scenarios = JSON.parse(readFileSync(join(tests, scenarioFile), "utf8"));
 const names = Object.keys(scenarios);
 if (target !== "all" && !Object.hasOwn(scenarios, target)) {
@@ -63,7 +63,8 @@ try {
     }
     const global = join(project, "test", "_global");
     mkdirSync(global, { recursive: true });
-    cpSync(join(recipe, "base", variant, ".devcontainer"), join(global, name), {
+    // The SMP delivery is the CPU base without an MPI.
+    cpSync(join(recipe, "base", variant === "smp" ? "cpu" : variant, ".devcontainer"), join(global, name), {
       recursive: true, filter: source => basename(source) !== "devcontainer.json",
     });
     cpSync(join(tests, "examples"), join(global, "examples"), { recursive: true });

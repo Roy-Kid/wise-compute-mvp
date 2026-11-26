@@ -6,7 +6,7 @@ example=$1
 examples=$(cd "$(dirname "$0")" && pwd)
 gpu=0
 if [[ $MATERIALS_TEST_VARIANT == cuda ]] && nvidia-smi -L &> /dev/null; then gpu=1; fi
-export HOME=/tmp OPENBLAS_NUM_THREADS=1 OMP_DYNAMIC=false WISE_VERIFY_GPU=$gpu
+export HOME=/tmp OMP_DYNAMIC=false WISE_VERIFY_GPU=$gpu
 if [[ $MATERIALS_TEST_VARIANT == cuda && $gpu == 0 ]]; then
     export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$CUDA_HOME/compat"
 fi
@@ -28,7 +28,8 @@ if [[ $MATERIALS_TEST_VARIANT == cuda && ( $example == openmp || $example == ful
     check "cuda-preflight build check" build_check cuda-preflight 60 || true
 fi
 if [[ $example == full ]]; then
-    check "delivery build check" build_check delivery 900 || true
+    # The delivery check is about the one MPI of an image; the SMP delivery has none.
+    [[ $MATERIALS_TEST_VARIANT == smp ]] || check "delivery build check" build_check delivery 900 || true
     check "openmp build check" build_check openmp 60 || true
     plan=$("$selftest" --plan)
 elif [[ -n $example ]]; then

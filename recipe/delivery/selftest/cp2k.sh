@@ -38,10 +38,15 @@ cat > molecule.inp <<'CP2K'
   &END SUBSYS
 &END FORCE_EVAL
 CP2K
-# On the CUDA base CP2K has an MPI of its own, started with cp2k-mpirun.
-launcher=mpirun
-! command -v cp2k-mpirun >/dev/null || launcher=cp2k-mpirun
-"$launcher" -n 1 cp2k.psmp -i molecule.inp > molecule.out || { cat molecule.out; exit 1; }
+# cp2k.psmp starts under an MPI launcher: cp2k-mpirun where CP2K has an MPI of its own. The threaded
+# cp2k.ssmp starts directly.
+if command -v cp2k.psmp > /dev/null; then
+    launcher=mpirun
+    ! command -v cp2k-mpirun > /dev/null || launcher=cp2k-mpirun
+    OMP_NUM_THREADS=2 "$launcher" -n 1 cp2k.psmp -i molecule.inp > molecule.out || { cat molecule.out; exit 1; }
+else
+    OMP_NUM_THREADS=2 cp2k.ssmp -i molecule.inp > molecule.out || { cat molecule.out; exit 1; }
+fi
 grep -q 'SCF run converged' molecule.out
 awk '/ENERGY\| Total FORCE_EVAL/ { if ($NF <= -1.4 || $NF >= -0.8) exit 1; found=1 } END { if (!found) exit 1 }' molecule.out
 if [ "${SELFTEST_GPU:-0}" = 1 ]; then

@@ -1,6 +1,6 @@
 {
   "id": "core",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "name": "WiseHub Feature core",
   "description": "Provides the /usr/local prefix, the Feature SDK, and capability lookup for software supplied by the base image or an installed Feature.",
   "containerEnv": {

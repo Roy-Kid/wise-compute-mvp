@@ -32,6 +32,9 @@ wise_provider() { # capability: prints the implementation from the base or an in
 wise_require_capability() { # capability: some Feature provides it (e.g. mpi: openmpi or mpich)
     wise_provider "$1" >/dev/null || wise_fail "the base image or a selected Feature must provide $1"
 }
+wise_mpi() { # the image has an MPI; without one the Features build their threaded programs
+    wise_provider mpi >/dev/null
+}
 wise_provide() { # capability: claim an exclusive capability; a second provider fails
     if current=$(wise_provider "$1"); then wise_fail "$1 is already provided by $current; select one"; fi
     echo "$wise_id" > "$WISE_REGISTRY/provides/$1"

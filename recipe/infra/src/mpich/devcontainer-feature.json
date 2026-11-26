@@ -1,8 +1,12 @@
 {
   "id": "mpich",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "name": "MPICH",
-  "description": "Builds MPICH 4.3.2 into /usr/local with ch4:ofi on libfabric. Use this Feature when the base image does not already provide MPI. Switching MPI requires rebuilding its bindings.",
+  "description": "Builds MPICH 4.3.2 into /usr/local with ch4:ofi on libfabric. Use this Feature when the base image does not already provide MPI. Switching MPI requires rebuilding its bindings. Sets one OpenMP and one OpenBLAS thread per rank by default.",
+  "containerEnv": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
   "dependsOn": {
     "harbor.will/wise/wise-compute-features/infra/core:3": {},
     "harbor.will/wise/wise-compute-features/infra/openmp:3": {},

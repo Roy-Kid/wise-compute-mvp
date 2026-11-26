@@ -1,0 +1,25 @@
+{
+  "name": "WiseHub materials SMP",
+  // For one cloud host: every toolchain, and LAMMPS, Quantum ESPRESSO and CP2K as threaded programs.
+  // The image has no MPI, so the Features build their OpenMP programs (lmp, pw.x, cp2k.ssmp).
+  "build": {
+    "dockerfile": "../../../base/cpu/.devcontainer/Dockerfile",
+    "context": "../../../base/cpu/.devcontainer"
+  },
+  "features": {
+    "harbor.will/wise/wise-compute-features/toolchains/python:2": {},
+    "harbor.will/wise/wise-compute-features/toolchains/conda:2": {},
+    "harbor.will/wise/wise-compute-features/toolchains/uv:2": {},
+    "harbor.will/wise/wise-compute-features/toolchains/rust:2": {},
+    "harbor.will/wise/wise-compute-features/toolchains/nodejs:2": {},
+    "harbor.will/wise/wise-compute-features/applications/materials-python:2": {},
+    "harbor.will/wise/wise-compute-features/applications/lammps:3": {},
+    "harbor.will/wise/wise-compute-features/applications/quantum-espresso:3": {},
+    "harbor.will/wise/wise-compute-features/applications/cp2k-integrals:2": {},
+    "harbor.will/wise/wise-compute-features/applications/cp2k-toolchain:2": {},
+    "harbor.will/wise/wise-compute-features/applications/cp2k:4": {},
+    "harbor.will/wise/wise-compute-features/applications/wannier90:2": {},
+    "harbor.will/wise/wise-compute-features/applications/packmol:2": {},
+    "harbor.will/wise/wise-compute-features/applications/multiwfn:1": {}
+  }
+}

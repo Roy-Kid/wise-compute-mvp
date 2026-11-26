@@ -1,6 +1,6 @@
 {
   "id": "lammps",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "name": "LAMMPS",
   "description": "Builds LAMMPS stable_30Sep2026_update1 (lmp) into /usr/local for the x86-64-v3 baseline with the image's MPI and OpenBLAS; KSPACE always uses the FFTW of the fftw Feature. Every bundled package is built except INTEL (needs the Intel compiler to pay off) and none that needs a third-party library or downloads code; packages backed by a Feature (PLUMED, H5MD, NETCDF) are added on request. The cuda variant adds KOKKOS (CUDA backend, cuFFT) and never the native GPU package.",
   "options": {

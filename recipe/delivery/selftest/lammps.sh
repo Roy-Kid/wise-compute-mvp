@@ -14,9 +14,17 @@ thermo_modify norm no
 run 0
 print "$(pe:%.12f)" file energy-${ranks}.txt
 LAMMPS
-for ranks in 1 2; do
-    mpirun -n "$ranks" lmp -var ranks "$ranks" -in pair.in -log none > "lammps-$ranks.out" || { cat "lammps-$ranks.out"; exit 1; }
-done
+# With an MPI in the image LAMMPS runs on one and two ranks; a threaded build runs on two OpenMP threads.
+if command -v mpirun > /dev/null; then
+    for ranks in 1 2; do
+        mpirun -n "$ranks" lmp -var ranks "$ranks" -in pair.in -log none > "lammps-$ranks.out" || { cat "lammps-$ranks.out"; exit 1; }
+    done
+else
+    for ranks in 1 2; do
+        OMP_NUM_THREADS=$ranks lmp -sf omp -var ranks "$ranks" -in pair.in -log none > "lammps-$ranks.out" || { cat "lammps-$ranks.out"; exit 1; }
+    done
+    grep -q 'using 2 OpenMP thread(s) per MPI task' lammps-2.out || { cat lammps-2.out; echo 'LAMMPS did not run on two threads' >&2; exit 1; }
+fi
 awk 'function abs(x) { return x < 0 ? -x : x }
     { if (abs($1 - 4 * (1.5^(-12) - 1.5^(-6))) > 0.000001) exit 1 }
     END { if (NR != 2) exit 1 }
@@ -31,4 +39,4 @@ if [ "${SELFTEST_GPU:-0}" = 1 ]; then
     ' energy-gpu.txt
     printf '%s\n' 'LAMMPS ran with KOKKOS on the GPU'
 fi
-printf '%s\n' 'LAMMPS Lennard-Jones energy matches the analytic value on one and two MPI ranks'
+printf '%s\n' 'LAMMPS Lennard-Jones energy matches the analytic value on one and two MPI ranks or threads'

@@ -1,11 +1,13 @@
 {
   "id": "openmpi",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "name": "Open MPI",
-  "description": "Builds Open MPI 5.0.11 into /usr/local with UCX, OFI and PMIx. Use this Feature when the base image does not already provide MPI. CPU is the default delivery; a CUDA build uses the NVIDIA Fortran compiler.",
+  "description": "Builds Open MPI 5.0.11 into /usr/local with UCX, OFI and PMIx. Use this Feature when the base image does not already provide MPI. CPU is the default delivery; a CUDA build uses the NVIDIA Fortran compiler. Sets one OpenMP and one OpenBLAS thread per rank by default.",
   "containerEnv": {
     "OMPI_MCA_pml": "ucx,ob1",
-    "OMPI_MCA_osc": "ucx,sm,rdma"
+    "OMPI_MCA_osc": "ucx,sm,rdma",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
   },
   "dependsOn": {
     "harbor.will/wise/wise-compute-features/infra/core:3": {},

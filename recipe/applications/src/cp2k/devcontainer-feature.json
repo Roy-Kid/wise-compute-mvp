@@ -1,6 +1,6 @@
 {
   "id": "cp2k",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "name": "CP2K",
   "description": "Builds CP2K 2026.2 on the libraries and choices of the cp2k-toolchain Feature. On the CUDA base CP2K runs on a GNU stack and Open MPI of its own: its commands set that environment, and cp2k-mpirun starts parallel runs.",
   "options": {
@@ -14,12 +14,12 @@
     "harbor.will/wise/wise-compute-features/infra/core:3": {},
     "harbor.will/wise/wise-compute-features/infra/openmp:3": {},
     "harbor.will/wise/wise-compute-features/infra/linear-algebra:3": {},
-    "harbor.will/wise/wise-compute-features/infra/fftw:2": {},
-    "harbor.will/wise/wise-compute-features/infra/scalapack:2": {}
+    "harbor.will/wise/wise-compute-features/infra/fftw:2": {}
   },
   "installsAfter": [
     "harbor.will/wise/wise-compute-features/infra/openmpi:3",
     "harbor.will/wise/wise-compute-features/infra/mpich:3",
+    "harbor.will/wise/wise-compute-features/infra/scalapack:2",
     "harbor.will/wise/wise-compute-features/applications/cp2k-toolchain:2"
   ]
 }

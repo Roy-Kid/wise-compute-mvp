@@ -29,10 +29,10 @@ test("materials-selftest skips what is not installed and reports the counts", ()
       encoding: "utf8", env: { PATH: "/usr/bin:/bin", HOME: work },
     });
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /^\[SKIP\] cp2k +cp2k\.psmp is not installed$/m);
+    assert.match(result.stdout, /^\[SKIP\] cp2k +cp2k\.psmp or cp2k\.ssmp is not installed$/m);
     assert.match(result.stdout, /^passed 0 of 0 \(0%\), failed 0, skipped 1;/m);
     assert.deepEqual(JSON.parse(readFileSync(json, "utf8")).results,
-      [{ name: "cp2k", status: "skip", seconds: 0, detail: "cp2k.psmp is not installed" }]);
+      [{ name: "cp2k", status: "skip", seconds: 0, detail: "cp2k.psmp or cp2k.ssmp is not installed" }]);
   } finally {
     rmSync(work, { recursive: true, force: true });
   }

@@ -7,14 +7,14 @@ wise_require_capability cp2k-toolchain
 deps=$WISE_PREFIX/cp2k-deps
 # On the CUDA base CP2K has a GNU stack of its own; see the cp2k-integrals Feature.
 . "$deps/gnu-stack.sh"
-if ! cp2k_gnu_stack; then
-    wise_require_capability mpi
-    wise_require fftw
-    wise_require scalapack
-fi
-# commit, gpu, elpa, hdf5 and large, as the cp2k-toolchain Feature built them.
+# commit, mpi, gpu, elpa, hdf5 and large, as the earlier CP2K Features built them.
 # shellcheck source=/dev/null
 . "$deps/wise.env"
+cp2k_gnu_stack || wise_require fftw
+if ! cp2k_gnu_stack && [ "$mpi" != none ]; then
+    wise_require_capability mpi
+    wise_require scalapack
+fi
 wise_workdir
 work=$WISE_WORK
 wise_fetch_git https://github.com/cp2k/cp2k.git "$commit" "$work/src" --all
@@ -27,17 +27,21 @@ if cp2k_gnu_stack; then
     # Out of the default PATH and loader directories: the commands in $WISE_PREFIX/bin set its environment.
     prefix=$deps/cp2k
     fftw=$(echo "$deps"/install/fftw-*/lib)
-    set --
+    set -- -DCP2K_USE_MPI=ON -DCP2K_SCALAPACK_VENDOR=GENERIC
+elif [ "$mpi" = none ]; then
+    prefix=$WISE_PREFIX
+    fftw=$WISE_PREFIX/lib
+    set -- -DCP2K_USE_MPI=OFF
 else
     prefix=$WISE_PREFIX
     fftw=$WISE_PREFIX/lib
-    set -- -DMPI_C_COMPILER="$WISE_MPI_ROOT/bin/mpicc" -DMPI_CXX_COMPILER="$WISE_MPI_ROOT/bin/mpicxx" \
+    set -- -DCP2K_USE_MPI=ON -DCP2K_SCALAPACK_VENDOR=GENERIC -DMPI_C_COMPILER="$WISE_MPI_ROOT/bin/mpicc" -DMPI_CXX_COMPILER="$WISE_MPI_ROOT/bin/mpicxx" \
         -DMPI_Fortran_COMPILER="$WISE_MPI_ROOT/bin/mpifort"
 fi
 
 set -- "$@" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$prefix" \
-    -DCP2K_USE_MPI=ON -DCP2K_USE_LIBXC=ON -DCP2K_USE_LIBINT2=ON -DCP2K_USE_FFTW3=ON -DCP2K_USE_LIBXS=ON -DCP2K_USE_LIBXSMM=ON \
-    -DCP2K_BLAS_VENDOR=OpenBLAS -DCP2K_SCALAPACK_VENDOR=GENERIC
+    -DCP2K_USE_LIBXC=ON -DCP2K_USE_LIBINT2=ON -DCP2K_USE_FFTW3=ON -DCP2K_USE_LIBXS=ON -DCP2K_USE_LIBXSMM=ON \
+    -DCP2K_BLAS_VENDOR=OpenBLAS
 [ "$elpa" != true ] || set -- "$@" -DCP2K_USE_ELPA=ON
 [ "$hdf5" != true ] || set -- "$@" -DCP2K_USE_HDF5=ON
 [ "$large" != true ] || set -- "$@" -DCP2K_USE_COSMA=ON -DCP2K_USE_SPLA=ON -DCP2K_USE_SIRIUS=ON \
@@ -58,7 +62,7 @@ CMAKE_LIBRARY_PATH="$fftw" bash -c '. "$1/install/setup" && shift && cmake "$@"'
 cache=$work/build/CMakeCache.txt
 # The toolchain links COSMA and SIRIUS statically, and CMake silently drops an option whose dependency is
 # off: check what will actually be built.
-for option in MPI LIBXC LIBINT2 FFTW3 LIBXS LIBXSMM $([ "$elpa" != true ] || echo ELPA) \
+for option in $([ "$mpi" = none ] || echo MPI) LIBXC LIBINT2 FFTW3 LIBXS LIBXSMM $([ "$elpa" != true ] || echo ELPA) \
     $([ "$hdf5" != true ] || echo HDF5) $([ "$large" != true ] || echo COSMA SPLA SIRIUS SPGLIB VORI); do
     grep -q "^CP2K_USE_$option:BOOL=ON$" "$cache" || wise_fail "CP2K_USE_$option is off"
 done
@@ -86,6 +90,11 @@ cmake --install "$work/build" --strip
 if cp2k_gnu_stack; then
     . "$(dirname "$0")/gnu-run.sh"
     cp2k_gnu_install_commands "$deps" "$prefix"
+elif [ "$mpi" = none ]; then
+    ldconfig
+    ! grep -q '^CP2K_USE_MPI:BOOL=ON$' "$cache" || wise_fail "the image has no MPI"
+    wise_linked "$WISE_PREFIX/bin/cp2k.ssmp" "$WISE_PREFIX/lib/libfftw3" libgomp
+    wise_not_linked "$WISE_PREFIX/bin/cp2k.ssmp" libmpi
 else
     ldconfig
     bin=$WISE_PREFIX/bin/cp2k.psmp

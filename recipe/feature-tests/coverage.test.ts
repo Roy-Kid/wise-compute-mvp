@@ -10,11 +10,11 @@ type Options = Record<string, string | boolean>;
 type Features = Record<string, Options>;
 type Scenarios = Record<string, { features: Features }>;
 
-const variants = ["cpu", "cuda"] as const;
+const variants = ["cpu", "cuda", "smp"] as const;
 const stack = readStack(fileURLToPath(new URL("../", import.meta.url)));
 const global = new URL("./test/_global/", import.meta.url);
 const scenarios = Object.fromEntries(variants.map(variant => {
-  const file = variant === "cpu" ? "scenarios.json" : "scenarios.cuda.json";
+  const file = variant === "cpu" ? "scenarios.json" : `scenarios.${variant}.json`;
   return [variant, JSON.parse(readFileSync(new URL(file, global), "utf8")) as Scenarios];
 }));
 

@@ -5,11 +5,15 @@ wise_id=cp2k-integrals
 
 wise_provide cp2k-integrals
 . "$(dirname "$0")/gnu-stack.sh"
-if ! cp2k_gnu_stack; then
-    wise_require_capability mpi
-    wise_require fftw
+# Without an MPI in the image CP2K is the threaded cp2k.ssmp; the later CP2K Features follow.
+mpi=none
+if cp2k_gnu_stack; then
+    mpi=own
+elif wise_mpi; then
+    mpi=$(wise_provider mpi)
     wise_require scalapack
 fi
+cp2k_gnu_stack || wise_require fftw
 wise_apt wget unzip
 wise_workdir
 work=$WISE_WORK
@@ -32,7 +36,9 @@ if cp2k_gnu_stack; then
     # shellcheck disable=SC2046
     set -- $(cp2k_gnu_toolchain_args)
 else
-    set -- --with-"$(wise_provider mpi)"=system --with-fftw=system --with-openblas=system --with-scalapack=system
+    if [ "$mpi" = none ]; then set -- --mpi-mode=no --with-scalapack=no
+    else set -- --with-"$mpi"=system --with-scalapack=system; fi
+    set -- "$@" --with-fftw=system --with-openblas=system
     export CPATH="$WISE_PREFIX/include" LIBRARY_PATH="$WISE_PREFIX/lib"
 fi
 set -- --target-cpu=haswell --with-gcc=system --with-cmake=system "$@" --with-libxc=install --with-libint=install \
@@ -46,5 +52,5 @@ for library in libint libxc; do
     ls "$deps/install/$library"-*/install_successful >/dev/null || wise_fail "$library was not built"
 done
 rm -rf "$deps/build"
-echo "commit=$commit" > "$deps/wise.env"
+printf '%s\n' "commit=$commit" "mpi=$mpi" > "$deps/wise.env"
 wise_done

@@ -1,0 +1,57 @@
+{
+  "openmp": {
+    "build": {
+      "dockerfile": "Dockerfile",
+      "context": "."
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": [
+      "--network=none",
+      "--shm-size=2g",
+      "--tmpfs=/tmp:exec,mode=1777"
+    ],
+    "features": {
+      "core": {},
+      "openmp": {}
+    }
+  },
+  "full": {
+    "build": {
+      "dockerfile": "Dockerfile",
+      "context": "."
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": [
+      "--network=none",
+      "--shm-size=2g",
+      "--tmpfs=/tmp:exec,mode=1777"
+    ],
+    "features": {
+      "core": {},
+      "openmp": {},
+      "linear-algebra": {},
+      "fftw": {},
+      "python": {},
+      "conda": {},
+      "uv": {},
+      "rust": {},
+      "nodejs": {},
+      "numpy": {},
+      "materials-python": {},
+      "lammps": {},
+      "quantum-espresso": {},
+      "cp2k-integrals": {},
+      "cp2k-toolchain": {},
+      "cp2k": {},
+      "wannier90": {},
+      "packmol": {},
+      "multiwfn": {}
+    }
+  }
+}

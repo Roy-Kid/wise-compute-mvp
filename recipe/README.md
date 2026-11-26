@@ -31,6 +31,7 @@ wise_done
 - CPU 交付通过 Feature 安装 Open MPI，使用 UCX 和 libfabric。可选 MPICH 使用 libfabric。
 - 基座通过 `WISE_BASE_<能力>` 声明已有能力。CUDA 设置 `WISE_BASE_MPI=openmpi` 和 `WISE_MPI_ROOT`，让 Feature 复用 SDK 自带的 HPC-X 和 UCX。重复选中 MPI 提供者会报错。使用 MPI 的 CUDA 版 Fortran 库按同一个 `nvfortran` ABI 构建。
 - CUDA 版 CP2K 是例外。它需要 gfortran（nvfortran 编不过 DBCSR），而 HPC-X 只提供 nvfortran 的 MPI Fortran 模块，所以 CP2K 的工具链在 `/usr/local/cp2k-deps` 自建一套 GNU 依赖和 Open MPI。这套依赖不进默认 `PATH` 和动态库缓存，`cp2k.psmp` 等命令自行设置环境，并行运行用 `cp2k-mpirun`；用镜像的 `mpirun` 启动会被拒绝。
+- 没有 MPI 的镜像里，FFTW、LAMMPS、Quantum ESPRESSO 和 CP2K 自动构建为多线程程序（`lmp`、`pw.x`、`cp2k.ssmp`），OpenMP 和 OpenBLAS（包括 NumPy、SciPy 自带的那份）默认用满所有核。有 MPI 时由 MPI 提供者设置 `OMP_NUM_THREADS=1` 和 `OPENBLAS_NUM_THREADS=1`，即每个进程一个线程。ScaLAPACK、ELPA、并行 HDF5 和 NetCDF、mpi4py 以及 CP2K 的 `largeSystems` 都需要 MPI。
 - CUDA、NVIDIA HPC SDK 和 GDRCopy 由 CUDA 基座提供。CPU 指令集基线是 x86-64-v3，每个进程只加载一套 OpenMP 运行时。
 - 修改 Feature 后递增其 `version`，升主版本时更新引用。发布和本地构建见 [CLI 用法](../docs/cli.md)。
 
@@ -45,6 +46,8 @@ wise_done
 | CP2K | ELPA、HDF5、`largeSystems` | 使用 GCC 和 CUDA 构建，启用 ELPA、HDF5 和 `largeSystems`，编译 `sm_120`；运行在自带的 GNU 栈和 Open MPI 上，用 `cp2k-mpirun` 启动 |
 
 两套交付还带 Multiwfn 2026.11.26 做波函数分析。它的源码只支持 Intel 编译器，所以安装的是作者发布的无图形界面程序，命令为 `Multiwfn`，算例文件在 `/usr/local/share/multiwfn/examples`。使用时按其许可引用原始论文。
+
+第三套交付 `smp` 面向单台云主机，定位类似超算登录节点：提供日常功能和快速测试，不做大规模计算。它基于 CPU 基座，不装 MPI，带全部工具链、材料 Python 包、Wannier90、Packmol 和 Multiwfn，LAMMPS、Quantum ESPRESSO 和 CP2K 为多线程版。[SMP 交付配置](delivery/smp/.devcontainer/devcontainer.json)
 
 应用的选项及默认值见各自的 `devcontainer-feature.json`。LAMMPS 始终启用 KSPACE，默认关闭 INTEL 和需联网下载代码的包。启用 `PLUMED`、`H5MD` 或 `NETCDF` 时需要对应 Feature。
 

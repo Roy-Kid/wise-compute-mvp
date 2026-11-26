@@ -8,6 +8,9 @@ wise_require_capability cp2k-integrals
 deps=$WISE_PREFIX/cp2k-deps
 # On the CUDA base CP2K has a GNU stack of its own; see the cp2k-integrals Feature.
 . "$deps/gnu-stack.sh"
+# commit and mpi, as the cp2k-integrals Feature chose them.
+# shellcheck source=/dev/null
+. "$deps/wise.env"
 gpu=${GPUVERSION:-}
 elpa=${ELPA:-false}
 hdf5=${HDF5:-false}
@@ -18,6 +21,10 @@ case $gpu in *[!A-Za-z0-9]*) wise_fail "gpuVersion=$gpu is no GPU name" ;; esac
 if cp2k_gnu_stack; then
     cp2k_gnu_env
     provided=install
+elif [ "$mpi" = none ]; then
+    [ "$elpa$hdf5$large" = falsefalsefalse ] || wise_fail "elpa, hdf5 and largeSystems need an MPI in the image"
+    wise_require fftw
+    provided=system
 else
     wise_require_capability mpi
     wise_require fftw
@@ -62,7 +69,9 @@ if cp2k_gnu_stack; then
     # shellcheck disable=SC2046
     set -- $(cp2k_gnu_toolchain_args)
 else
-    set -- --with-"$(wise_provider mpi)"=system --with-fftw=system --with-openblas=system --with-scalapack=system
+    if [ "$mpi" = none ]; then set -- --mpi-mode=no --with-scalapack=no
+    else set -- --with-"$mpi"=system --with-scalapack=system; fi
+    set -- "$@" --with-fftw=system --with-openblas=system
     # SIRIUS looks for libfftw3_mpi without a hint.
     export CPATH="$WISE_PREFIX/include" LIBRARY_PATH="$WISE_PREFIX/lib" CMAKE_LIBRARY_PATH="$WISE_PREFIX/lib"
 fi

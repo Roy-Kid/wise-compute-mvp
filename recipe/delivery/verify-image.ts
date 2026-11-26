@@ -8,7 +8,7 @@ import { parseFeatureReference } from "../../cli/src/features.ts";
 
 /** Runs the full-image scenario on an already built image. */
 export function verifyImage(image: string, variant: string): void {
-  if (variant !== "cpu" && variant !== "cuda") throw new Error(`Unknown delivery variant: ${variant}`);
+  if (!["cpu", "cuda", "smp"].includes(variant)) throw new Error(`Unknown delivery variant: ${variant}`);
   const recipe = new URL(`./${variant}/.devcontainer/devcontainer.json`, import.meta.url);
   const { features } = parse(readFileSync(recipe, "utf8"));
   const ids = Object.keys(features).map(reference => parseFeatureReference(reference).id);
@@ -51,6 +51,6 @@ export function verifyImage(image: string, variant: string): void {
 
 if (import.meta.main) {
   const [variant, image, ...extra] = process.argv.slice(2);
-  if (!variant || !image || extra.length) throw new Error("usage: npm run test:delivery -- cpu|cuda IMAGE");
+  if (!variant || !image || extra.length) throw new Error("usage: npm run test:delivery -- cpu|cuda|smp IMAGE");
   verifyImage(image, variant);
 }

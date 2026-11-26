@@ -3,7 +3,6 @@ set -eu
 wise_id=lammps
 . /usr/local/lib/devcontainer-features/feature.sh
 
-wise_require_capability mpi
 wise_require fftw
 wise_require linear-algebra
 list() { echo "$1" | tr ',' ' '; }
@@ -18,6 +17,7 @@ case "$variant" in
     cpu) ;;
     cuda)
         wise_cuda || wise_fail "variant=cuda needs the CUDA base image"
+        wise_mpi || wise_fail "variant=cuda needs an MPI"
         . "$(dirname "$0")/lammps-cuda.sh"
         cuda_link_flags=$(lammps_cuda_link_flags)
         lammps_cuda_file_table_available /proc/sys/fs/file-nr
@@ -43,6 +43,8 @@ providers="PLUMED:plumed H5MD:hdf5 NETCDF:netcdf"
 downloading="KIM MACHDYN MBX MDI ML-HDNNP ML-PACE ML-QUIP ML-RUNNER PLUMED SCAFACOS VORONOI"
 # Bundled packages off by default: INTEL only pays off with the Intel compiler.
 off="INTEL"
+# Without an MPI in the image LAMMPS is the threaded program on its own MPI stubs; these packages need a real MPI.
+wise_mpi || off="$off LATBOLTZ"
 provider() { # package -> backing Feature
     for entry in $providers; do [ "${entry%%:*}" != "$1" ] || { echo "${entry#*:}"; return 0; }; done
     return 1
@@ -62,9 +64,14 @@ wise_fetch_git https://github.com/lammps/lammps.git 098ffdefa525cabc82272925de02
 # OpenMP threads from the fftw Feature, and never the native GPU package.
 set -- -C "$src/cmake/presets/all_on.cmake" -C "$src/cmake/presets/nolib.cmake" \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$WISE_PREFIX" -DBUILD_SHARED_LIBS=ON \
-    -DBUILD_MPI=ON -DMPI_C_COMPILER="$WISE_MPI_ROOT/bin/mpicc" -DMPI_CXX_COMPILER="$WISE_MPI_ROOT/bin/mpicxx" -DBUILD_OMP=ON \
+    -DBUILD_OMP=ON \
     -DPKG_KSPACE=ON -DFFT=FFTW3 -DFFTW3_INCLUDE_DIR="$WISE_PREFIX/include" -DFFTW3_LIBRARY="$WISE_PREFIX/lib/libfftw3.so" \
     -DFFTW3_OMP_LIBRARY="$WISE_PREFIX/lib/libfftw3_omp.so" -DFFT_FFTW_THREADS=ON -DPKG_GPU=OFF -DPLUMED_MODE=shared
+if wise_mpi; then
+    set -- "$@" -DBUILD_MPI=ON -DMPI_C_COMPILER="$WISE_MPI_ROOT/bin/mpicc" -DMPI_CXX_COMPILER="$WISE_MPI_ROOT/bin/mpicxx"
+else
+    set -- "$@" -DBUILD_MPI=OFF
+fi
 if [ "$potentials" = all ]; then set -- "$@" -DDOWNLOAD_POTENTIALS=ON; else set -- "$@" -DDOWNLOAD_POTENTIALS=OFF; fi
 for package in $downloading $off; do member "$package" "$extra" || set -- "$@" -DPKG_"$package"=OFF; done
 for package in $extra; do set -- "$@" -DPKG_"$package"=ON; done
@@ -132,6 +139,8 @@ cmake -S "$src/cmake" -B "$build" "$@"
 cache=$build/CMakeCache.txt
 on() { grep -q "^$1:BOOL=ON$" "$cache"; }
 on PKG_KSPACE || wise_fail "KSPACE is required"
+on BUILD_OMP || wise_fail "OpenMP is required"
+if wise_mpi; then on BUILD_MPI || wise_fail "LAMMPS must use the image's MPI"; else ! on BUILD_MPI || wise_fail "the image has no MPI"; fi
 grep -q '^FFT:STRING=FFTW3$' "$cache" || wise_fail "KSPACE must use FFTW3 from the fftw Feature"
 ! on PKG_GPU || wise_fail "the native GPU package is never built; use variant=cuda (KOKKOS)"
 if [ "$variant" = cuda ]; then
@@ -165,7 +174,8 @@ fi
 cmake --install "$build" --strip
 ldconfig
 [ "$potentials" != none ] || rm -rf "$WISE_PREFIX/share/lammps/potentials"
-wise_mpi_linked "$WISE_PREFIX/bin/lmp" "$WISE_PREFIX/lib/libfftw3" "$WISE_PREFIX/lib/libfftw3_omp"
+if wise_mpi; then wise_mpi_linked "$WISE_PREFIX/bin/lmp" "$WISE_PREFIX/lib/libfftw3" "$WISE_PREFIX/lib/libfftw3_omp"
+else wise_linked "$WISE_PREFIX/bin/lmp" "$WISE_PREFIX/lib/libfftw3" "$WISE_PREFIX/lib/libfftw3_omp" && wise_not_linked "$WISE_PREFIX/bin/lmp" libmpi; fi
 [ "$variant" != cuda ] || wise_linked "$WISE_PREFIX/bin/lmp" libcufft
 for entry in $providers; do
     if on "PKG_${entry%%:*}"; then wise_linked "$WISE_PREFIX/lib/liblammps.so" "$WISE_PREFIX/lib/lib${entry#*:}"; fi

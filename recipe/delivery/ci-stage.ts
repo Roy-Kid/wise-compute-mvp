@@ -1,5 +1,5 @@
 // Build one local stage, or verify the completed image after restoring its checkpoint.
-//   node recipe/delivery/ci-stage.ts cpu|cuda 1..N|N.PART|release
+//   node recipe/delivery/ci-stage.ts cpu|cuda|smp 1..N|N.PART|release
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -13,8 +13,8 @@ const [, stageText, partText] = /^(\d+)(?:\.(\d+))?$/.exec(goal ?? "") ?? [];
 const stage = Number(stageText);
 const part = partText === undefined ? undefined : Number(partText);
 const validStage = Number.isInteger(stage) && stage >= 1 && stage <= stageCount;
-if (!["cpu", "cuda"].includes(variant) || (goal !== "release" && !validStage) || extra.length) {
-  throw new Error(`usage: node recipe/delivery/ci-stage.ts cpu|cuda 1..${stageCount}|N.PART|release`);
+if (!["cpu", "cuda", "smp"].includes(variant) || (goal !== "release" && !validStage) || extra.length) {
+  throw new Error(`usage: node recipe/delivery/ci-stage.ts cpu|cuda|smp 1..${stageCount}|N.PART|release`);
 }
 
 const platform = "linux/amd64";
