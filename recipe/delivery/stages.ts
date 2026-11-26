@@ -8,7 +8,7 @@ import { parseFeatureReference, readStack } from "../../cli/src/features.ts";
 
 /** Features of the later stages, in order: the long builds. The first stage holds all the others. */
 export const laterStages = [
-  ["elpa"], ["lammps"], ["quantum-espresso"], ["cp2k-integrals"], ["cp2k-toolchain"], ["cp2k"], ["openmpi-defaults"],
+  ["elpa"], ["lammps"], ["quantum-espresso"], ["cp2k-integrals"], ["cp2k-toolchain"], ["cp2k"], ["openmpi-defaults", "multiwfn"],
 ];
 export const stageCount = laterStages.length + 1;
 

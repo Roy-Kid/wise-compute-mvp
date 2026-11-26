@@ -26,7 +26,6 @@ export function verifyImage(image: string, variant: string): void {
     remoteEnv: {
       MATERIALS_TEST_FEATURES: ids.join(" "),
       MATERIALS_TEST_VARIANT: variant,
-      MATERIALS_TEST_GPU: gpu ? "1" : "0",
     },
   };
   const fixtures = new URL("../feature-tests/test/_global/", import.meta.url);
@@ -36,6 +35,7 @@ export function verifyImage(image: string, variant: string): void {
     mkdirSync(join(project, "src"));
     mkdirSync(global, { recursive: true });
     cpSync(new URL("examples", fixtures), join(global, "examples"), { recursive: true });
+    cpSync(new URL("./selftest", import.meta.url), join(global, "examples/selftest"), { recursive: true });
     if (variant === "cuda") {
       cpSync(new URL("../applications/src/lammps/lammps-cuda.sh", import.meta.url), join(global, "examples/lammps-cuda.sh"));
     }

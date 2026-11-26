@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 export MPLCONFIGDIR=$PWD/matplotlib MPLBACKEND=Agg
-"$WISE_VENV/bin/python" - <<'PY'
+python3 - <<'PY'
 import MDAnalysis
 import h5py
 import matplotlib.pyplot
@@ -27,4 +27,4 @@ with h5py.File('results.h5', 'w') as output:
 with h5py.File('results.h5') as output:
     assert output['energy'][0] == energy
 PY
-mpirun -n 2 "$WISE_VENV/bin/python" -c 'from mpi4py import MPI; c = MPI.COMM_WORLD; assert c.size == 2 and c.allreduce(c.rank) == 1'
+mpirun -n 2 python3 -c 'from mpi4py import MPI; c = MPI.COMM_WORLD; assert c.size == 2 and c.allreduce(c.rank) == 1'

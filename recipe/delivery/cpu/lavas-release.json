@@ -11,6 +11,7 @@
   "applications": {
     "lammps": "stable_30Sep2026_update1",
     "packmol": "21.2.3",
+    "multiwfn": "2026.11.26",
     "quantum-espresso": "7.6",
     "wannier90": "3.1.0",
     "cp2k": "2026.2"

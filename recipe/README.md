@@ -44,6 +44,8 @@ wise_done
 | Quantum ESPRESSO | GCC、MPI、OpenMP、ScaLAPACK、ELPA、HDF5 | nvfortran、OpenACC、GPU-aware MPI，编译 `sm_120` |
 | CP2K | ELPA、HDF5、`largeSystems` | 使用 GCC 和 CUDA 构建，启用 ELPA、HDF5 和 `largeSystems`，编译 `sm_120`；运行在自带的 GNU 栈和 Open MPI 上，用 `cp2k-mpirun` 启动 |
 
+两套交付还带 Multiwfn 2026.11.26 做波函数分析。它的源码只支持 Intel 编译器，所以安装的是作者发布的无图形界面程序，命令为 `Multiwfn`，算例文件在 `/usr/local/share/multiwfn/examples`。使用时按其许可引用原始论文。
+
 应用的选项及默认值见各自的 `devcontainer-feature.json`。LAMMPS 始终启用 KSPACE，默认关闭 INTEL 和需联网下载代码的包。启用 `PLUMED`、`H5MD` 或 `NETCDF` 时需要对应 Feature。
 
 两套交付都安装与 `wise-platform` 材料 CPU 清单同版本的 NumPy、SciPy、pandas、Matplotlib、ASE、pymatgen、spglib、Phonopy、Phono3py、PySCF、pycalphad、MDAnalysis 和 h5py。传递依赖按 Ubuntu 24.04 的 CPython 3.12／linux/amd64 锁定 wheel 和 SHA-256，验收包含离线导入及 HDF5 读写。[Python 依赖锁](applications/src/materials-python/requirements.txt)
@@ -66,6 +68,21 @@ npm run test:features -- cpu packmol
 npm run test:features -- cpu all
 npm run test:features -- cuda all
 ```
+
+### 真机自检
+
+镜像部署到运行机器后，用 [自检目录](delivery/selftest/) 确认每个软件的最小算例都能跑通。自检不装进镜像，也不依赖本仓库的构建系统，CPU 和 CUDA 镜像共用。把 `delivery/selftest/` 整个目录拷到目标机器即可。
+
+```bash
+sh run-in-image.sh wise-compute:materials-cuda
+sh run-in-image.sh wise-compute:materials-cpu lammps cp2k
+```
+
+脚本把目录只读挂进容器执行 `materials-selftest`，逐项输出 `PASS`、`FAIL` 或 `SKIP`、耗时和成功率，有失败时退出码为 1。各项输出和 `result.json` 写到当前目录的 `selftest-logs`。镜像里没有的软件记为 `SKIP`。
+
+CUDA 镜像在宿主机有 GPU 时自动带 `--gpus all`，LAMMPS、Quantum ESPRESSO 和 CP2K 必须在输出中报告自己在 GPU 上计算，否则判失败。看不到 GPU 时设备相关的项记为 `SKIP`，加 `--require-gpu` 则判失败。核对显卡是否符合本交付的编译目标时设置 `SELFTEST_MIN_DRIVER=575 SELFTEST_GPU_CAPABILITY=12.0`。已在容器内时直接执行 `sh materials-selftest`。
+
+构建机的 Feature 测试和完整镜像验收复用这些算例，另加只属于本仓库构建的检查。
 
 Scenario 和断言脚本放在 `feature-tests/test/_global/`，遵循 Dev Container Feature Starter 的结构。`npm run test:features` 将各层的源码整理到临时 `src/`，再逐个调用官方 `devcontainer features test --global-scenarios-only`。断言通过 Dev Container CLI 提供的 `check` 和 `reportResults` 执行。[Feature Starter](https://github.com/devcontainers/feature-starter) · [官方测试文档](https://github.com/devcontainers/cli/blob/main/docs/features/test.md)
 

@@ -116,6 +116,18 @@
     "userEnvProbe": "none",
     "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777"]
   },
+  "multiwfn": {
+    "build": {"dockerfile":"Dockerfile","context":"."},
+    "features": {
+      "core": {},
+      "multiwfn": {}
+    },
+    "containerUser": "nobody",
+    "remoteUser": "nobody",
+    "updateRemoteUserUID": false,
+    "userEnvProbe": "none",
+    "runArgs": ["--network=none","--shm-size=2g","--tmpfs=/tmp:exec,mode=1777"]
+  },
   "wannier90": {
     "build": {"dockerfile":"Dockerfile","context":"."},
     "features": {

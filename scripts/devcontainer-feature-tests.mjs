@@ -67,6 +67,7 @@ try {
       recursive: true, filter: source => basename(source) !== "devcontainer.json",
     });
     cpSync(join(tests, "examples"), join(global, "examples"), { recursive: true });
+    cpSync(join(recipe, "delivery/selftest"), join(global, "examples/selftest"), { recursive: true });
     if (variant === "cuda") {
       cpSync(join(recipe, "applications/src/lammps/lammps-cuda.sh"), join(global, "examples/lammps-cuda.sh"));
     }
@@ -76,7 +77,7 @@ try {
     if (proxyArgs.length) scenario.build.options = [...(scenario.build.options ?? []), ...proxyArgs];
     if (!gpu) scenario.runArgs = scenario.runArgs.filter(arg => !arg.startsWith("--gpus="));
     scenario.remoteEnv = { ...scenario.remoteEnv, MATERIALS_TEST_FEATURES: ids.join(" "),
-      MATERIALS_TEST_VARIANT: variant, MATERIALS_TEST_GPU: gpu ? "1" : "0" };
+      MATERIALS_TEST_VARIANT: variant };
     writeFileSync(join(global, "scenarios.json"), JSON.stringify({ [name]: scenario }, null, 2) + "\n");
     execFileSync(process.execPath, [script, "features", "test", "--project-folder", project, "--global-scenarios-only"],
       { env: devcontainerTempEnv(project), stdio: "inherit" });

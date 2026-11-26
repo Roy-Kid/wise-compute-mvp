@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-"$WISE_VENV/bin/python" -c 'import ssl, sqlite3; assert sqlite3.connect(":memory:").execute("select 6 * 7").fetchone() == (42,)'
+python3 -c 'import ssl, sqlite3; assert sqlite3.connect(":memory:").execute("select 6 * 7").fetchone() == (42,)'
 conda --version
 uv --version
 node -e 'const assert = require("node:assert/strict"); assert.equal(Buffer.from("2a", "hex")[0], 42)'

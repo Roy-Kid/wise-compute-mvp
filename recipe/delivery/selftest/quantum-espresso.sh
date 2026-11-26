@@ -39,4 +39,8 @@ mpirun -n 1 pw.x -in molecule.in > molecule.out || { cat molecule.out; exit 1; }
 grep -q 'convergence has been achieved' molecule.out
 grep -q 'JOB DONE' molecule.out
 awk '/^!.*total energy/ { if ($5 <= -3 || $5 >= -1.5) exit 1; found=1 } END { if (!found) exit 1 }' molecule.out
+if [ "${SELFTEST_GPU:-0}" = 1 ]; then
+    grep -q 'GPU acceleration is ACTIVE' molecule.out || { cat molecule.out; echo 'pw.x did not run on the GPU' >&2; exit 1; }
+    printf '%s\n' 'Quantum ESPRESSO ran with GPU acceleration'
+fi
 printf '%s\n' 'Quantum ESPRESSO generated a hydrogen potential and converged the H2 SCF example'

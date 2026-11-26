@@ -1,0 +1,160 @@
+#!/bin/sh
+# Self-test of a materials-simulation container: runs one small example per installed program and reports
+# how many passed. It needs only a POSIX shell and coreutils, and depends on no particular image build:
+# copy this directory anywhere and run this file inside a started container, or let run-in-image.sh
+# start one from an image.
+#
+#   materials-selftest [--require-gpu] [--json FILE] [--logs DIR] [TEST...]
+#   materials-selftest --list
+#
+# Without TEST it runs every test. A test whose program is not installed is skipped. In a CUDA image a
+# visible GPU adds the device checks: LAMMPS, Quantum ESPRESSO and CP2K must report that they computed on
+# it. Without a GPU those are skipped, or fail with --require-gpu. The exit status is 1 when a test
+# failed and 2 for a wrong call. Each test's output is kept in --logs. With SELFTEST_MIN_DRIVER and
+# SELFTEST_GPU_CAPABILITY set, the gpu test requires that driver and compute capability.
+set -u
+
+here=$(dirname "$(readlink -f "$0")")
+
+# name | seconds | needs: cmd:PROGRAM or py:MODULE | device: always, or cuda (needs a GPU in a CUDA image)
+tests='
+gpu|60|cmd:nvidia-smi|always
+openmp|300|cmd:gcc cmd:g++ cmd:gfortran|
+toolchains|300|cmd:python3 cmd:conda cmd:uv cmd:node cmd:npm cmd:cargo cmd:rustc|
+mpi|300|cmd:mpicc cmd:mpirun|
+libraries|300|cmd:mpicc cmd:mpirun cmd:nc-config cmd:h5pcc cmd:pkg-config|
+python|300|cmd:python3 cmd:mpirun py:ase py:pymatgen py:mpi4py|
+packmol|300|cmd:packmol|
+multiwfn|300|cmd:Multiwfn|
+wannier90|300|cmd:wannier90.x|
+plumed|300|cmd:plumed|
+lammps|300|cmd:lmp cmd:mpirun|
+quantum-espresso|300|cmd:pw.x cmd:ld1.x cmd:mpirun|cuda
+cp2k|300|cmd:cp2k.psmp|cuda
+'
+field() { printf '%s\n' "$tests" | awk -F'|' -v name="$1" -v n="$2" '$1 == name { print $n }'; }
+names() { printf '%s\n' "$tests" | awk -F'|' 'NF { print $1 }'; }
+
+variant=cpu
+if [ -n "${CUDA_HOME:-}" ] || command -v nvcc > /dev/null; then variant=cuda; fi
+gpu=0
+[ "$variant" != cuda ] || ! nvidia-smi -L > /dev/null 2>&1 || gpu=1
+
+# Prints why a test cannot run here; nothing when it can.
+skip_reason() {
+    case "$(field "$1" 4):$variant:$gpu" in
+        always:cpu:*) echo "not a CUDA image"; return ;;
+        always:cuda:0|cuda:cuda:0) echo "no GPU is visible; start the container with --gpus"; return ;;
+    esac
+    for need in $(field "$1" 3); do
+        case "$need" in
+            cmd:*) command -v "${need#cmd:}" > /dev/null || { echo "${need#cmd:} is not installed"; return; } ;;
+            py:*) python3 -c "import importlib.util, sys; sys.exit(importlib.util.find_spec('${need#py:}') is None)" \
+                2> /dev/null || { echo "the Python package ${need#py:} is not installed"; return; } ;;
+        esac
+    done
+}
+
+prepare() {
+    [ -n "${HOME:-}" ] && [ -w "$HOME" ] || export HOME=/tmp
+    export OPENBLAS_NUM_THREADS=1 OMP_DYNAMIC=false SELFTEST_GPU=$gpu
+    export SELFTEST_MIN_DRIVER="${SELFTEST_MIN_DRIVER:-}" SELFTEST_GPU_CAPABILITY="${SELFTEST_GPU_CAPABILITY:-}"
+    # Open MPI: two-rank examples also run with access to one core, and as root in a container.
+    export OMPI_MCA_rmaps_base_oversubscribe=1 PRTE_MCA_rmaps_default_mapping_policy=:oversubscribe
+    [ "$(id -u)" != 0 ] || export OMPI_ALLOW_RUN_AS_ROOT=1 OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+    # Without a driver the CUDA toolkit's compatibility libcuda lets the CUDA programs load.
+    if [ "$variant" = cuda ] && [ "$gpu" = 0 ] && [ -d "${CUDA_HOME:-}/compat" ]; then
+        export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$CUDA_HOME/compat"
+    fi
+}
+run_test() (
+    work=$(mktemp -d) || exit
+    trap 'rm -rf "$work"' EXIT
+    cd "$work" || exit
+    timeout "$(field "$1" 2)" sh "$here/$1.sh" < /dev/null
+)
+usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+
+require_gpu=0 json= logs= mode=run selected=
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --require-gpu) require_gpu=1 ;;
+        --json) [ $# -ge 2 ] || usage; json=$2; shift ;;
+        --logs) [ $# -ge 2 ] || usage; logs=$2; shift ;;
+        --list) mode=list ;;
+        # For a test harness that reports each test itself: the tests that can run here, and one test
+        # with its own output and exit status.
+        --plan) mode=plan ;;
+        --run) mode=one ;;
+        -*) usage ;;
+        *) selected="$selected $1" ;;
+    esac
+    shift
+done
+[ -n "${selected# }" ] || selected=$(names)
+for name in $selected; do
+    [ -n "$(field "$name" 2)" ] || { echo "materials-selftest: unknown test $name; see --list" >&2; exit 2; }
+done
+
+case "$mode" in
+    list)
+        names
+        exit 0 ;;
+    plan)
+        for name in $selected; do
+            reason=$(skip_reason "$name")
+            if [ -z "$reason" ]; then echo "$name"; else echo "$name skipped: $reason" >&2; fi
+        done
+        exit 0 ;;
+    one)
+        prepare
+        for name in $selected; do run_test "$name" || exit; done
+        exit 0 ;;
+esac
+
+prepare
+[ -n "$logs" ] || logs=$(mktemp -d "${TMPDIR:-/tmp}/materials-selftest.XXXXXX") || exit 2
+mkdir -p "$logs" || exit 2
+passed=0 failed=0 skipped=0 rows=
+record() { # status name seconds detail
+    rows="$rows$(printf '    {"name": "%s", "status": "%s", "seconds": %s, "detail": "%s"}' "$2" "$1" "$3" "$4"),
+"
+}
+echo "materials-selftest: $variant image, $([ "$gpu" = 1 ] && echo "GPU visible" || echo "no GPU visible")"
+for name in $selected; do
+    reason=$(skip_reason "$name")
+    if [ -n "$reason" ]; then
+        case "$require_gpu:$reason" in
+            1:"no GPU"*)
+                failed=$((failed + 1)); record fail "$name" 0 "$reason"
+                printf '[FAIL] %-18s %s\n' "$name" "$reason" ;;
+            *)
+                skipped=$((skipped + 1)); record skip "$name" 0 "$reason"
+                printf '[SKIP] %-18s %s\n' "$name" "$reason" ;;
+        esac
+        continue
+    fi
+    start=$(date +%s)
+    run_test "$name" > "$logs/$name.log" 2>&1
+    status=$?
+    seconds=$(($(date +%s) - start))
+    if [ "$status" = 0 ]; then
+        passed=$((passed + 1)); record pass "$name" "$seconds" ""
+        printf '[PASS] %-18s %4ss\n' "$name" "$seconds"
+    else
+        detail="exit status $status"
+        [ "$status" != 124 ] || detail="timed out after $(field "$name" 2)s"
+        failed=$((failed + 1)); record fail "$name" "$seconds" "$detail"
+        printf '[FAIL] %-18s %4ss  %s, see %s\n' "$name" "$seconds" "$detail" "$logs/$name.log"
+    fi
+done
+ran=$((passed + failed))
+rate=0
+[ "$ran" = 0 ] || rate=$((100 * passed / ran))
+echo "passed $passed of $ran ($rate%), failed $failed, skipped $skipped; logs in $logs"
+if [ -n "$json" ]; then
+    printf '{\n  "variant": "%s", "gpu": %s,\n  "passed": %s, "failed": %s, "skipped": %s,\n  "results": [\n%s\n  ]\n}\n' \
+        "$variant" "$([ "$gpu" = 1 ] && echo true || echo false)" "$passed" "$failed" "$skipped" \
+        "$(printf '%s' "$rows" | sed '$ s/,$//')" > "$json" || exit 2
+fi
+[ "$failed" = 0 ]

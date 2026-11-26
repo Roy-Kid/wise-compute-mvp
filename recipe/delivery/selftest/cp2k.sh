@@ -44,4 +44,10 @@ launcher=mpirun
 "$launcher" -n 1 cp2k.psmp -i molecule.inp > molecule.out || { cat molecule.out; exit 1; }
 grep -q 'SCF run converged' molecule.out
 awk '/ENERGY\| Total FORCE_EVAL/ { if ($NF <= -1.4 || $NF >= -0.8) exit 1; found=1 } END { if (!found) exit 1 }' molecule.out
+if [ "${SELFTEST_GPU:-0}" = 1 ]; then
+    # CP2K's closing memory statistics count what it allocated on the device.
+    awk '/OFFLOAD MEMPOOL STATISTICS/ { table = 1 } table && $1 == "Device" { if ($2 > 0) used = 1 } END { exit !used }' molecule.out \
+        || { cat molecule.out; echo 'CP2K did not allocate memory on the GPU' >&2; exit 1; }
+    printf '%s\n' 'CP2K computed on the GPU'
+fi
 printf '%s\n' 'CP2K converged the H2 energy example using installed basis and potential data'

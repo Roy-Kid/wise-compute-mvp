@@ -1,5 +1,5 @@
 #!/bin/sh
-# Delivery checks run by the Dev Container CLI full-image scenario.
+# Consistency checks of a full delivery: wise-selftest --full, and the full-image scenario of the image build.
 set -eu
 
 variant=${1:?usage: delivery.sh cpu|cuda}
@@ -22,7 +22,7 @@ fi
 for path in "${LD_LIBRARY_PATH:-}" "${CPATH:-}" "${LIBRARY_PATH:-}" "$PATH"; do
     [ -z "$path" ] || case ":$path:" in *::*) fail "a search path includes the current directory: $path" ;; esac
 done
-for tool in lmp pw.x ph.x pw2wannier90.x wannier90.x cp2k.psmp packmol mpirun ucx_info nc-config h5pcc \
+for tool in lmp pw.x ph.x pw2wannier90.x wannier90.x cp2k.psmp packmol Multiwfn mpirun ucx_info nc-config h5pcc \
     conda uv rustc cargo node npm; do
     command -v "$tool"
 done
@@ -215,11 +215,6 @@ for lib in libcublas libcusolver; do
 done
 echo "$ompi" | grep -Eq '(^|:)mpi_built_with_cuda_support:value:true$' || fail "Open MPI is not CUDA-aware"
 [ "${WISE_VERIFY_GPU:-1}" = 1 ] || exit 0
-nvidia-smi -L
-driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1)
-[ "${driver%%.*}" -ge 575 ] || fail "CUDA delivery requires NVIDIA driver 575 or newer (found $driver)"
-capability=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -1)
-[ "$capability" = 12.0 ] || fail "expected compute capability 12.0 (found $capability)"
 # Run on the device: KOKKOS must initialize the GPU and finish both runs, PPPM with cuFFT.
 mpirun -n 1 lmp -k on g 1 -sf kk -var ranks 1 -in in.lj -log none -screen none
 mpirun -n 1 lmp -k on g 1 -sf kk -in in.pppm -log none -screen none

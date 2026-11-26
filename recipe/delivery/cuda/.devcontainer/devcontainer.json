@@ -30,6 +30,7 @@
     "harbor.will/wise/wise-compute-features/applications/cp2k:4": {},
     "harbor.will/wise/wise-compute-features/infra/openmpi-defaults:2": {},
     "harbor.will/wise/wise-compute-features/applications/wannier90:2": {},
-    "harbor.will/wise/wise-compute-features/applications/packmol:2": {}
+    "harbor.will/wise/wise-compute-features/applications/packmol:2": {},
+    "harbor.will/wise/wise-compute-features/applications/multiwfn:1": {}
   }
 }
