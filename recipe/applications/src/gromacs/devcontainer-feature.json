@@ -1,0 +1,32 @@
+{
+  "id": "gromacs",
+  "version": "1.0.0",
+  "name": "GROMACS",
+  "description": "Builds GROMACS 2026.4 into /usr/local for the x86-64-v3 baseline (AVX2) with the FFTW of the fftw Feature and OpenBLAS: gmx with thread-MPI for one node, and gmx_mpi with the image's MPI when it has one. The cuda variant runs non-bonded, PME, bonded and update work on NVIDIA GPUs.",
+  "options": {
+    "variant": {
+      "type": "string",
+      "enum": [
+        "cpu",
+        "cuda"
+      ],
+      "default": "cpu",
+      "description": "cpu: SIMD and OpenMP only. cuda: additionally the CUDA GPU kernels and cuFFT; requires the CUDA base image."
+    },
+    "cmakeArgs": {
+      "type": "string",
+      "default": "",
+      "description": "Extra CMake arguments, space separated, applied last. All checks still apply."
+    }
+  },
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:3": {},
+    "harbor.will/wise/wise-compute-features/infra/linear-algebra:3": {},
+    "harbor.will/wise/wise-compute-features/infra/fftw:2": {}
+  },
+  "installsAfter": [
+    "harbor.will/wise/wise-compute-features/infra/openmpi:3",
+    "harbor.will/wise/wise-compute-features/infra/mpich:3"
+  ]
+}

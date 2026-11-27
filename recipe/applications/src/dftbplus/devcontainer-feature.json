@@ -1,0 +1,11 @@
+{
+  "id": "dftbplus",
+  "version": "1.0.0",
+  "name": "DFTB+",
+  "description": "Builds DFTB+ 26.1 (density functional tight binding; program dftb+, its tools and libdftbplus) into /usr/local with GCC, OpenMP threads and OpenBLAS from the release source archive, with xTB through tblite, s-dftd3, electron transport and socket communication, and without many-body dispersion. It is the threaded build that DFTB+ documents as its default; Slater-Koster files are not included, and the ASE calculator finds them through DFTB_PREFIX.",
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:3": {},
+    "harbor.will/wise/wise-compute-features/infra/linear-algebra:3": {}
+  }
+}

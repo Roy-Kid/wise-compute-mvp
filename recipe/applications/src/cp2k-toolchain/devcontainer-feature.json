@@ -1,6 +1,6 @@
 {
   "id": "cp2k-toolchain",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "name": "CP2K libraries",
   "description": "Builds the libraries of CP2K 2026.2 with its checksum-verified toolchain, on the selected MPI, FFTW, ScaLAPACK and OpenBLAS. On the CUDA base CP2K needs gfortran, which the SDK's MPI has no Fortran modules for, so the toolchain builds a GNU stack with its own Open MPI for CP2K alone. ELPA, HDF5 and large-system libraries are optional; the cp2k Feature follows these choices.",
   "options": {

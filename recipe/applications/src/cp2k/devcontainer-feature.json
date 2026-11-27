@@ -1,6 +1,6 @@
 {
   "id": "cp2k",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "name": "CP2K",
   "description": "Builds CP2K 2026.2 on the libraries and choices of the cp2k-toolchain Feature. On the CUDA base CP2K runs on a GNU stack and Open MPI of its own: its commands set that environment, and cp2k-mpirun starts parallel runs.",
   "options": {

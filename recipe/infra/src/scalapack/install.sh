@@ -2,9 +2,9 @@
 set -eu
 wise_id=scalapack
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 wise_require_capability mpi
-wise_require linear-algebra
 wise_workdir
 cd "$WISE_WORK"
 wise_fetch_tar https://github.com/Reference-ScaLAPACK/scalapack/archive/refs/tags/v2.2.3.tar.gz \

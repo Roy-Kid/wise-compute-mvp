@@ -1,0 +1,12 @@
+{
+  "id": "atomistica",
+  "version": "1.0.0",
+  "name": "Atomistica",
+  "description": "Installs the hash-pinned Atomistica 1.2.7 wheel (bond-order, embedded-atom and tight-binding interatomic potentials as ASE calculators) into the environment of the python Feature.",
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/toolchains/python:2": {},
+    "harbor.will/wise/wise-compute-features/applications/numpy:2": {},
+    "harbor.will/wise/wise-compute-features/applications/materials-python:2": {}
+  }
+}

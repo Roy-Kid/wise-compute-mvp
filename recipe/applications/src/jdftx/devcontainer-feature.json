@@ -1,0 +1,34 @@
+{
+  "id": "jdftx",
+  "version": "1.0.0",
+  "name": "JDFTx",
+  "description": "Builds JDFTx 1.7.0 (jdftx, phonon, wannier) into /usr/local with FFTW, OpenBLAS, GSL and Libxc, with the image's MPI and ScaLAPACK when they are installed, and installs its GBRV and SG15 pseudopotentials. The cuda variant adds the GPU programs jdftx_gpu, phonon_gpu and wannier_gpu.",
+  "options": {
+    "variant": {
+      "type": "string",
+      "enum": [
+        "cpu",
+        "cuda"
+      ],
+      "default": "cpu",
+      "description": "cpu: the CPU programs. cuda: additionally the *_gpu programs on CUDA with cuSOLVER; requires the CUDA base image."
+    },
+    "cudaArch": {
+      "type": "string",
+      "default": "80",
+      "description": "Compute capability the GPU programs of the cuda variant are compiled for (sm_<value>)."
+    }
+  },
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:3": {},
+    "harbor.will/wise/wise-compute-features/infra/linear-algebra:3": {},
+    "harbor.will/wise/wise-compute-features/infra/fftw:2": {},
+    "harbor.will/wise/wise-compute-features/infra/libxc:1": {}
+  },
+  "installsAfter": [
+    "harbor.will/wise/wise-compute-features/infra/openmpi:3",
+    "harbor.will/wise/wise-compute-features/infra/mpich:3",
+    "harbor.will/wise/wise-compute-features/infra/scalapack:2"
+  ]
+}

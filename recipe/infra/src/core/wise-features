@@ -1,0 +1,10 @@
+#!/bin/sh
+# Lists the Features installed in this image, one per line: id and version. The version is "-" for a
+# Feature that an SDK before 4 registered, which recorded none.
+set -eu
+registry=${WISE_REGISTRY:-/usr/local/share/devcontainer-features}
+for record in "$registry"/*; do
+    [ -f "$record" ] || continue
+    version=$(sed -n 's/^version=//p' "$record")
+    printf '%s %s\n' "$(basename "$record")" "${version:--}"
+done

@@ -8,7 +8,7 @@
 #   materials-selftest --list
 #
 # Without TEST it runs every test. A test whose program is not installed is skipped. In a CUDA image a
-# visible GPU adds the device checks: LAMMPS, Quantum ESPRESSO and CP2K must report that they computed on
+# visible GPU adds the device checks: the programs built for CUDA must report that they computed on
 # it. Without a GPU those are skipped, or fail with --require-gpu. The exit status is 1 when a test
 # failed and 2 for a wrong call. Each test's output is kept in --logs. With SELFTEST_MIN_DRIVER and
 # SELFTEST_GPU_CAPABILITY set, the gpu test requires that driver and compute capability.
@@ -31,6 +31,19 @@ plumed|300|cmd:plumed|
 lammps|300|cmd:lmp|
 quantum-espresso|300|cmd:pw.x cmd:ld1.x|cuda
 cp2k|300|any:cp2k.psmp,cp2k.ssmp|cuda
+gromacs|300|cmd:gmx|
+gpaw|300|cmd:python3 py:gpaw|
+abacus|300|cmd:abacus cmd:mpirun|
+jdftx|300|cmd:jdftx|
+xtb|300|cmd:xtb|
+dftbplus|300|cmd:dftb+|
+mopac|300|cmd:mopac|
+kim|300|cmd:kim-api-collections-management|
+dftd3|300|cmd:python3 py:dftd3|
+dftd4|300|cmd:python3 py:dftd4|
+atomistica|300|cmd:python3 py:atomistica|
+asap3|300|cmd:python3 py:asap3|
+deepmd-kit|600|cmd:dp cmd:python3 py:deepmd|
 '
 field() { printf '%s\n' "$tests" | awk -F'|' -v name="$1" -v n="$2" '$1 == name { print $n }'; }
 names() { printf '%s\n' "$tests" | awk -F'|' 'NF { print $1 }'; }

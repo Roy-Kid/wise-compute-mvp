@@ -1,6 +1,6 @@
 {
   "id": "fftw",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "name": "FFTW",
   "description": "Builds FFTW 3.3.11 into /usr/local in double and single precision, each with OpenMP and threads, and with MPI when the image has one, SIMD kernels up to AVX-512 and FMA chosen at run time: the FFT library of every CPU code path (LAMMPS KSPACE, Quantum ESPRESSO, CP2K).",
   "dependsOn": {

@@ -2,8 +2,8 @@
 set -eu
 wise_id=libfabric
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
-wise_require rdma
 wise_workdir
 cd "$WISE_WORK"
 wise_fetch_tar https://github.com/ofiwg/libfabric/releases/download/v2.7.0/libfabric-2.7.0.tar.bz2 \

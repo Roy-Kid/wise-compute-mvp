@@ -2,6 +2,7 @@
 set -eu
 wise_id=conda
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 wise_apt ca-certificates curl
 

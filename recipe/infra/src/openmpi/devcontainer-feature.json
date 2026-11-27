@@ -1,6 +1,6 @@
 {
   "id": "openmpi",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "name": "Open MPI",
   "description": "Builds Open MPI 5.0.11 into /usr/local with UCX, OFI and PMIx. Use this Feature when the base image does not already provide MPI. CPU is the default delivery; a CUDA build uses the NVIDIA Fortran compiler. Sets one OpenMP and one OpenBLAS thread per rank by default.",
   "containerEnv": {

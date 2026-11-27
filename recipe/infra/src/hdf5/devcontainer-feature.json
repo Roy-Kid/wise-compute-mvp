@@ -1,6 +1,6 @@
 {
   "id": "hdf5",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "name": "Parallel HDF5",
   "description": "Builds parallel HDF5 2.2.0 with C, Fortran, MPI-IO and zlib. Uses the image's MPI compiler wrappers and builds the Fortran modules with GNU Fortran on CPU or nvfortran on CUDA.",
   "dependsOn": {

@@ -1,6 +1,6 @@
 {
   "id": "conda",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "name": "Conda",
   "description": "Installs a checksum-verified distribution of Conda.",
   "dependsOn": {

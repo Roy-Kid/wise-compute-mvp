@@ -2,8 +2,8 @@
 set -eu
 wise_id=packmol
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
-wise_require openmp
 wise_workdir
 wise_fetch_git https://github.com/m3g/packmol.git d70e10b13033dfbd3eb4d00b1b803989f17b1452 "$WISE_WORK/src"
 cmake -S "$WISE_WORK/src" -B "$WISE_WORK/build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$WISE_PREFIX"

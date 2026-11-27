@@ -2,8 +2,8 @@
 set -eu
 wise_id=ucx
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
-wise_require rdma
 wise_workdir
 cd "$WISE_WORK"
 wise_fetch_tar https://github.com/openucx/ucx/releases/download/v1.21.1/ucx-1.21.1.tar.gz \

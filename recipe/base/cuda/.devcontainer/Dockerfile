@@ -16,6 +16,9 @@ ENV PATH=${WISE_MPI_ROOT}/bin:${HPCX_HOME}/ucx/bin:${CUDA_HOME}/bin:${PATH}
 ENV OMPI_CC=gcc OMPI_CXX=g++ OMPI_FC=nvfortran
 # The base provides the MPI: one OpenMP and one OpenBLAS thread per rank by default, as the MPI Features set it.
 ENV OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
+# A program started without mpirun must not wait for a helper daemon: HPC-X Open MPI 4.1 starts one for every
+# such program and never returns from MPI_Init in a container. Only MPI_Comm_spawn from such a program is lost.
+ENV OMPI_MCA_ess_singleton_isolated=1
 # The base image ends these lists with ":", which adds the current directory.
 ENV LD_LIBRARY_PATH=${NVHPC_ROOT}/comm_libs/nvshmem/lib:${NVHPC_ROOT}/comm_libs/nccl/lib:${NVHPC_ROOT}/math_libs/lib64:${NVHPC_ROOT}/compilers/lib:${CUDA_HOME}/lib64
 ENV CPATH=${NVHPC_ROOT}/comm_libs/nvshmem/include:${NVHPC_ROOT}/comm_libs/nccl/include:${NVHPC_ROOT}/compilers/extras/qd/include/qd:${NVHPC_ROOT}/math_libs/include:${GDRCOPY_HOME}/include

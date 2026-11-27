@@ -1,0 +1,40 @@
+{
+  "id": "abacus",
+  "version": "1.0.0",
+  "name": "ABACUS",
+  "description": "Builds ABACUS 3.10.1 (abacus: plane-wave and numerical atomic orbital DFT) into /usr/local with the image's MPI, OpenMP, FFTW, ScaLAPACK, ELPA, OpenBLAS and Libxc, and installs the pseudopotentials and numerical orbitals of its test suite in /usr/local/share/abacus/PP_ORB. The cuda variant adds the CUDA kernels with cuBLAS, cuSOLVER and cuFFT, selected at run time with the input keyword device gpu.",
+  "options": {
+    "variant": {
+      "type": "string",
+      "enum": [
+        "cpu",
+        "cuda"
+      ],
+      "default": "cpu",
+      "description": "cpu: CPU only. cuda: additionally the CUDA kernels; requires the CUDA base image."
+    },
+    "cudaArch": {
+      "type": "string",
+      "default": "80",
+      "description": "Compute capabilities the CUDA kernels of the cuda variant are compiled for, comma separated (for example 80,90)."
+    },
+    "cmakeArgs": {
+      "type": "string",
+      "default": "",
+      "description": "Extra CMake arguments, space separated, applied last. All checks still apply."
+    }
+  },
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:3": {},
+    "harbor.will/wise/wise-compute-features/infra/linear-algebra:3": {},
+    "harbor.will/wise/wise-compute-features/infra/fftw:2": {},
+    "harbor.will/wise/wise-compute-features/infra/libxc:1": {},
+    "harbor.will/wise/wise-compute-features/infra/scalapack:2": {},
+    "harbor.will/wise/wise-compute-features/infra/elpa:2": {}
+  },
+  "installsAfter": [
+    "harbor.will/wise/wise-compute-features/infra/openmpi:3",
+    "harbor.will/wise/wise-compute-features/infra/mpich:3"
+  ]
+}

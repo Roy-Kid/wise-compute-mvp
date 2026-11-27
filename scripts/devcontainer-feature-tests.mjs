@@ -11,6 +11,8 @@ if (!["cpu", "cuda", "smp", "cloud"].includes(variant) || extra.length) {
 }
 
 const recipe = join(import.meta.dirname, "..", "recipe");
+// The checks next to the examples load the repository's SDK, not the one the image was built with.
+const sdkFiles = ["feature.sh", "deps.sh", "build.sh"];
 const tests = join(recipe, "feature-tests", "test", "_global");
 const scenarioFile = variant === "cpu" ? "scenarios.json" : `scenarios.${variant}.json`;
 const scenarios = JSON.parse(readFileSync(join(tests, scenarioFile), "utf8"));
@@ -69,6 +71,8 @@ try {
     });
     cpSync(join(tests, "examples"), join(global, "examples"), { recursive: true });
     cpSync(join(recipe, "delivery/selftest"), join(global, "examples/selftest"), { recursive: true });
+    mkdirSync(join(global, "examples/sdk"));
+    for (const file of sdkFiles) cpSync(join(recipe, "infra/src/core", file), join(global, "examples/sdk", file));
     if (variant === "cuda") {
       cpSync(join(recipe, "applications/src/lammps/lammps-cuda.sh"), join(global, "examples/lammps-cuda.sh"));
     }

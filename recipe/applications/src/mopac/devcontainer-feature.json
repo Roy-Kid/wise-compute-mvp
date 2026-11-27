@@ -1,0 +1,11 @@
+{
+  "id": "mopac",
+  "version": "1.0.0",
+  "name": "MOPAC",
+  "description": "Builds MOPAC 23.2.5 (semiempirical quantum chemistry; program mopac and libmopac) into /usr/local with GCC, OpenMP threads and OpenBLAS.",
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:3": {},
+    "harbor.will/wise/wise-compute-features/infra/linear-algebra:3": {}
+  }
+}

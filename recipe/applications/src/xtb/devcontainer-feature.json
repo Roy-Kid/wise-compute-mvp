@@ -1,0 +1,19 @@
+{
+  "id": "xtb",
+  "version": "1.0.0",
+  "name": "xtb",
+  "description": "Builds xtb 6.8.0 (GFN-xTB and GFN-FF semiempirical methods; program xtb and libxtb) into /usr/local with GCC, OpenMP and OpenBLAS from the release source archive, which carries its own tblite, dftd4, s-dftd3 and CPCM-X. With the python Feature it also installs the hash-pinned tblite 0.8.0 wheel, whose tblite.ase.TBLite is the ASE calculator that replaced xtb-python.",
+  "containerEnv": {
+    "XTBPATH": "/usr/local/share/xtb"
+  },
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:3": {},
+    "harbor.will/wise/wise-compute-features/infra/linear-algebra:3": {}
+  },
+  "installsAfter": [
+    "harbor.will/wise/wise-compute-features/toolchains/python:2",
+    "harbor.will/wise/wise-compute-features/applications/numpy:2",
+    "harbor.will/wise/wise-compute-features/applications/materials-python:2"
+  ]
+}

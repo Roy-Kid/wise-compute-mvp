@@ -1,0 +1,37 @@
+{
+  "id": "gpaw",
+  "version": "1.0.0",
+  "name": "GPAW",
+  "description": "Builds the hash-pinned GPAW 25.7.0 sdist into the environment of the python Feature against Libxc, OpenBLAS and FFTW, with the image's MPI and ScaLAPACK when they are installed, and installs the PAW datasets (gpaw-data 1.2.1). The cuda variant adds the CUDA kernels and CuPy for GPAW's GPU plane-wave mode.",
+  "options": {
+    "variant": {
+      "type": "string",
+      "enum": [
+        "cpu",
+        "cuda"
+      ],
+      "default": "cpu",
+      "description": "cpu: CPU only. cuda: additionally GPAW's CUDA kernels and CuPy 14.2.0 for CUDA 12; requires the CUDA base image."
+    },
+    "cudaArch": {
+      "type": "string",
+      "default": "80",
+      "description": "Compute capability the CUDA kernels of the cuda variant are compiled for (sm_<value>)."
+    }
+  },
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:3": {},
+    "harbor.will/wise/wise-compute-features/infra/linear-algebra:3": {},
+    "harbor.will/wise/wise-compute-features/infra/fftw:2": {},
+    "harbor.will/wise/wise-compute-features/infra/libxc:1": {},
+    "harbor.will/wise/wise-compute-features/toolchains/python:2": {},
+    "harbor.will/wise/wise-compute-features/applications/numpy:2": {},
+    "harbor.will/wise/wise-compute-features/applications/materials-python:2": {}
+  },
+  "installsAfter": [
+    "harbor.will/wise/wise-compute-features/infra/openmpi:3",
+    "harbor.will/wise/wise-compute-features/infra/mpich:3",
+    "harbor.will/wise/wise-compute-features/infra/scalapack:2"
+  ]
+}

@@ -2,10 +2,11 @@
 set -eu
 wise_id=multiwfn
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 release=Multiwfn_2026.11.26_bin_Linux_noGUI
 home=$WISE_PREFIX/share/multiwfn
-wise_apt unzip
+wise_apt ca-certificates curl unzip
 wise_workdir
 # The Multiwfn site serves no HTTPS; the checksum fixes the content.
 wise_retry curl --fail --location --silent --show-error --connect-timeout 30 --speed-limit 1024 --speed-time 60 \

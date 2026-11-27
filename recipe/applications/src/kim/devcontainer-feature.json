@@ -1,0 +1,15 @@
+{
+  "id": "kim",
+  "version": "1.0.0",
+  "name": "OpenKIM",
+  "description": "Builds the KIM API 2.4.2 (libkim-api, kim-api-collections-management and its example models) into /usr/local with GCC, for interatomic models from the OpenKIM repository. With the materials-python Feature it also builds the hash-pinned kimpy 2.1.4, which the ASE KIM calculator uses. Models are added with kim-api-collections-management install.",
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:3": {}
+  },
+  "installsAfter": [
+    "harbor.will/wise/wise-compute-features/toolchains/python:2",
+    "harbor.will/wise/wise-compute-features/applications/numpy:2",
+    "harbor.will/wise/wise-compute-features/applications/materials-python:2"
+  ]
+}

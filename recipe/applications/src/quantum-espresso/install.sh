@@ -2,8 +2,8 @@
 set -eu
 wise_id=quantum-espresso
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
-wise_require fftw
 # Without an MPI in the image QE is the threaded program: no ScaLAPACK, ELPA or parallel HDF5.
 if wise_mpi; then
     wise_require scalapack

@@ -39,14 +39,18 @@ describe("command line", () => {
   test("help lists the image and feature commands", () => {
     const help = cli("image", "--help");
     assert.equal(help.status, 0);
-    for (const command of ["image build", "image push", "image pull", "feature publish"]) {
+    for (const command of ["image build", "image push", "image pull", "image extend", "image export",
+      "feature publish", "feature check", "feature list"]) {
       assert.match(help.stdout, new RegExp(`wisehub ${command}\\b`));
     }
   });
 
   test("unknown commands and bad arguments are usage errors, not forwarded", () => {
     for (const args of [["image", "exec"], ["compute"], ["toString", "x"], ["image", "push", "only-one"],
-      ["image", "pull", "--bogus", "x"], ["feature", "publish", "stack"], ["feature", "pack"]]) {
+      ["image", "pull", "--bogus", "x"], ["feature", "publish", "stack"], ["feature", "pack"],
+      ["image", "extend", "source", "--image", "x"], ["image", "extend", "source", "--context", ".", "--image", "x", "--build-arg", "BASE_IMAGE=y"],
+      ["image", "export", "image:tag"], ["image", "export", "untagged", "--output", "out"],
+      ["feature", "check"], ["feature", "list"]]) {
       const result = cli(...args);
       assert.equal(result.status, 2, args.join(" "));
       assert.match(result.stderr, /^wisehub: /);

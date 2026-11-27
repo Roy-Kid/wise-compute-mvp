@@ -2,6 +2,7 @@
 set -eu
 wise_id=uv
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 wise_apt ca-certificates curl
 

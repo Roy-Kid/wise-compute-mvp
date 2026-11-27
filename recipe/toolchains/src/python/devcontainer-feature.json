@@ -1,6 +1,6 @@
 {
   "id": "python",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "name": "Python virtual environment",
   "description": "Installs Ubuntu CPython with build tools and a shared virtual environment. Later Features and users locate it through WISE_VENV.",
   "containerEnv": {

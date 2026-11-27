@@ -1,6 +1,6 @@
 {
   "id": "rdma",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "name": "RDMA user space",
   "description": "rdma-core (libibverbs, librdmacm and the verbs providers: mlx5, EFA, RoCE, ...) and libnuma: what UCX and libfabric need to drive InfiniBand and RoCE. Devices and kernel drivers come from the host (--device /dev/infiniband, --ulimit memlock=-1).",
   "dependsOn": {

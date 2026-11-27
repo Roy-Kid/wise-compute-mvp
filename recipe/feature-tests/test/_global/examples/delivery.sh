@@ -6,7 +6,9 @@ variant=${1:?usage: delivery.sh cpu|cuda}
 case "$variant" in cpu|cuda) ;; *) echo "unknown variant: $variant" >&2; exit 2 ;; esac
 : "${WISE_VENV:?WISE_VENV is missing; the python Feature is not installed}"
 wise_id=verify
-. /usr/local/lib/devcontainer-features/feature.sh
+# The SDK of the repository, copied next to these checks; it reads the registry of the image, whatever SDK built that.
+WISE_SDK_DIR=$(dirname "$0")/sdk
+. "$WISE_SDK_DIR/feature.sh"
 
 fail() { echo "verify: $*" >&2; exit 1; }
 # On the CUDA base CP2K runs on a GNU stack and MPI of its own, reached through the commands in /usr/local/bin.
@@ -38,6 +40,7 @@ if [ "$variant" = cpu ]; then
     for provider in verbs shm tcp; do fi_info -l | grep -q "^$provider:" || fail "libfabric lacks $provider"; done
 else
     [ "${WISE_BASE_MPI:-}" = openmpi ] || fail "the CUDA base must supply Open MPI"
+    [ "${OMPI_MCA_ess_singleton_isolated:-}" = 1 ] || fail "the CUDA base must let MPI programs start without mpirun"
     ucx_info -v
 fi
 # MPI in a container: shared memory needs room; the defaults (64 MiB) break intra-node transport.

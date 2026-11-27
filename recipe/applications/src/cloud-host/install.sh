@@ -2,9 +2,8 @@
 set -eu
 wise_id=cloud-host
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
-wise_require python
-wise_require numpy
 src=$(dirname "$0")
 wise_apt \
     ca-certificates git curl wget jq ripgrep rsync openssh-client patch diffutils file \

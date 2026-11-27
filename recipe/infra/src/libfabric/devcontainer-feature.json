@@ -1,6 +1,6 @@
 {
   "id": "libfabric",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "name": "libfabric",
   "description": "Builds libfabric 2.7.0 (OFI) into /usr/local with the verbs, EFA, shm and tcp providers and, on the CUDA base image, CUDA memory and GDRCopy. Open MPI's OFI path and MPICH's ch4:ofi device.",
   "dependsOn": {

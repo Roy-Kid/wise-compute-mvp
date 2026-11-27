@@ -1,6 +1,6 @@
 {
   "id": "openmpi-defaults",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "name": "Open MPI defaults",
   "description": "Lets Open MPI choose its point-to-point layer: UCX on supported devices, otherwise shared memory and TCP.",
   "containerEnv": {

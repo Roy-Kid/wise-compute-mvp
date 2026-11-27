@@ -2,9 +2,9 @@
 set -eu
 wise_id=plumed
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 wise_require_capability mpi
-wise_require linear-algebra
 wise_workdir
 cd "$WISE_WORK"
 wise_fetch_tar https://github.com/plumed/plumed2/releases/download/v2.10.2/plumed-src-2.10.2.tgz \
@@ -13,5 +13,7 @@ cd src
 ./configure --prefix="$WISE_PREFIX" CC="$WISE_MPI_ROOT/bin/mpicc" CXX="$WISE_MPI_ROOT/bin/mpicxx" --disable-doc
 make -j"$(wise_build_jobs)"
 make install
+# libplumed.so loads libplumedKernel.so from the same directory by name.
+ldconfig
 wise_mpi_linked "$WISE_PREFIX/lib/libplumed.so"
 wise_done

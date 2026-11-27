@@ -1,6 +1,6 @@
 {
   "id": "plumed",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "name": "PLUMED",
   "description": "Builds PLUMED 2.10.2 (the plumed driver and libplumed) into /usr/local with the image's MPI and OpenBLAS. Applications enable their PLUMED interface only when this Feature is installed.",
   "dependsOn": {

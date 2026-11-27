@@ -3,7 +3,9 @@ set -eu
 test "$OMP_PLACES" = cores
 test "$OMP_PROC_BIND" = close
 wise_id=openmp-test
-. /usr/local/lib/devcontainer-features/feature.sh
+# The SDK of the repository, copied next to these checks; it reads the registry of the image, whatever SDK built that.
+WISE_SDK_DIR=$(dirname "$0")/sdk
+. "$WISE_SDK_DIR/feature.sh"
 # One thread per rank where the image has an MPI, every core where it has none.
 if wise_mpi; then test "$OMP_NUM_THREADS" = 1 && test "$OPENBLAS_NUM_THREADS" = 1
 else test -z "${OMP_NUM_THREADS:-}${OPENBLAS_NUM_THREADS:-}"; fi

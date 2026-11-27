@@ -1,0 +1,10 @@
+{
+  "id": "libxc",
+  "version": "1.0.0",
+  "name": "Libxc",
+  "description": "Builds the Libxc 6.2.2 exchange-correlation functional library (C interface, derivatives up to the third) into /usr/local with GCC, for the DFT programs that take their functionals from it. Libxc 7 moved the functional identifiers out of xc.h, which JDFTx 1.7.0 does not yet follow.",
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:3": {}
+  }
+}

@@ -1,123 +1,21 @@
 # WiseHub Feature SDK. Every Feature's install.sh starts with
 #   wise_id=<id>
 #   . /usr/local/lib/devcontainer-features/feature.sh
-# and ends with wise_done. Features learn about each other only through the registry below, by id or by
-# capability, never by probing another Feature's files. The wise_require* calls check each Feature's
-# prerequisites before it builds.
+#   wise_sdk <the lowest SDK the script works with>
+# and ends with wise_done. An image keeps the SDK that built it, so a script written for a later one says
+# so and stops there instead of taking a missing function for a condition that is false.
+# deps.sh holds what a Feature may know about the image, build.sh the helpers for building.
 # shellcheck shell=sh
 
+# Raised by one whenever a function is added or changes; each function names the SDK it is in since.
+WISE_SDK=4
 WISE_PREFIX=/usr/local
 WISE_MPI_ROOT=${WISE_MPI_ROOT:-$WISE_PREFIX}
-WISE_REGISTRY=$WISE_PREFIX/share/devcontainer-features
 : "${wise_id:?set wise_id before sourcing feature.sh}"
 
-wise_fail() { echo "$wise_id: $*" >&2; exit 1; }
+wise_fail() { echo "$wise_id: $*" >&2; exit 1; } # since 3. message
 
-# --- Registry -------------------------------------------------------------------------------------
-wise_has() { [ -e "$WISE_REGISTRY/$1" ]; } # feature
-wise_require() { # feature [why]: an installed Feature this one needs
-    wise_has "$1" || wise_fail "needs the $1 Feature${2:+ ($2)}; add it to the delivery"
-}
-wise_require_if() { # value feature [why]: needed when a boolean option is true
-    [ "$1" != true ] || wise_require "$2" "${3:-}"
-}
-wise_provider() { # capability: prints the implementation from the base or an installed Feature
-    capability_key=$(printf '%s' "$1" | tr 'a-z-' 'A-Z_')
-    if base_provider=$(printenv "WISE_BASE_$capability_key") && [ -n "$base_provider" ]; then
-        printf '%s\n' "$base_provider"
-    else
-        [ -e "$WISE_REGISTRY/provides/$1" ] && cat "$WISE_REGISTRY/provides/$1"
-    fi
-}
-wise_require_capability() { # capability: some Feature provides it (e.g. mpi: openmpi or mpich)
-    wise_provider "$1" >/dev/null || wise_fail "the base image or a selected Feature must provide $1"
-}
-wise_mpi() { # the image has an MPI; without one the Features build their threaded programs
-    wise_provider mpi >/dev/null
-}
-wise_provide() { # capability: claim an exclusive capability; a second provider fails
-    if current=$(wise_provider "$1"); then wise_fail "$1 is already provided by $current; select one"; fi
-    echo "$wise_id" > "$WISE_REGISTRY/provides/$1"
-}
-wise_done() { # register this Feature as installed
-    ldconfig
-    mkdir -p "$WISE_REGISTRY/provides"
-    : > "$WISE_REGISTRY/$wise_id"
-}
-
-# --- Sources: pinned, verified, no history ----------------------------------------------------------
-# One dropped connection must not cost hours of compilation.
-export PIP_RETRIES=10 PIP_DEFAULT_TIMEOUT=60
-wise_retry() { # command...: up to five attempts with a growing pause
-    attempt=1
-    until "$@"; do
-        [ "$attempt" -lt 5 ] || wise_fail "failed after $attempt attempts: $*"
-        echo "$wise_id: attempt $attempt failed, retrying: $*" >&2
-        sleep "$((attempt * ${WISE_RETRY_PAUSE:-15}))"
-        attempt=$((attempt + 1))
-    done
-}
-wise_download() { # url sha256 file
-    wise_retry curl --fail --location --silent --show-error --connect-timeout 30 --speed-limit 1024 --speed-time 60 \
-        --proto '=https' "$1" -o "$3"
-    echo "$2  $3" | sha256sum --check --quiet || wise_fail "checksum mismatch for $1"
-}
-wise_workdir() { # sets WISE_WORK, removed on exit
-    WISE_WORK=$(mktemp -d)
-    trap 'rm -rf "$WISE_WORK"' EXIT
-}
-wise_fetch_tar() { # url sha256 dir: download, verify and unpack one release archive into dir
-    mkdir -p "$3"
-    wise_download "$1" "$2" "$3.archive"
-    tar -xf "$3.archive" -C "$3" --strip-components=1
-    rm -f "$3.archive"
-}
-wise_fetch_git() { # url commit dir [submodule...|--all]: exactly one commit, depth 1, no tags
-    url=$1 commit=$2 dir=$3; shift 3
-    git init --quiet "$dir"
-    wise_retry git -C "$dir" fetch --quiet --depth 1 --no-tags "$url" "$commit"
-    git -C "$dir" checkout --quiet FETCH_HEAD
-    if [ "${1:-}" = --all ]; then wise_retry git -C "$dir" submodule update --quiet --init --depth 1
-    elif [ $# -gt 0 ]; then wise_retry git -C "$dir" submodule update --quiet --init --depth 1 -- "$@"; fi
-}
-wise_apt() { # package...: install from the base image's Ubuntu snapshot
-    # A failed index download is only a warning unless asked otherwise.
-    wise_retry env DEBIAN_FRONTEND=noninteractive apt-get -o APT::Update::Error-Mode=any update
-    wise_retry env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$@"
-    rm -rf /var/lib/apt/lists/*
-}
-
-# --- Checks -----------------------------------------------------------------------------------------
-wise_linked() { # binary pattern...: resolves every library and links each pattern
-    libs=$(ldd "$1") || wise_fail "ldd $1 failed"
-    if echo "$libs" | grep -q "not found"; then echo "$libs" >&2; wise_fail "$1 has unresolved libraries"; fi
-    bin=$1; shift
-    for pattern; do echo "$libs" | grep -q "$pattern" || wise_fail "$bin does not link $pattern"; done
-}
-wise_not_linked() { # binary pattern...
-    bin=$1; shift
-    for pattern; do ! ldd "$bin" | grep -q "$pattern" || wise_fail "$bin must not link $pattern"; done
-}
-wise_mpi_linked() { # binary [other library patterns...]
-    mpi_binary=$1; shift
-    wise_linked "$mpi_binary" 'libmpi' "$@"
-    mpi_library=$(ldd "$mpi_binary" | awk '$1 ~ /^libmpi(ch)?[.]so([.]|$)/ { print $3 }')
-    [ -n "$mpi_library" ] && [ -e "$WISE_MPI_ROOT/lib/libmpi.so" ] \
-        && [ "$(readlink -f "$mpi_library")" = "$(readlink -f "$WISE_MPI_ROOT/lib/libmpi.so")" ] \
-        || wise_fail "$mpi_binary does not link the MPI from $WISE_MPI_ROOT"
-}
-
-# --- Toolchains -------------------------------------------------------------------------------------
-wise_build_jobs() {
-    # The image's OpenMP settings are for running the compiled software.
-    env -u OMP_NUM_THREADS OMP_THREAD_LIMIT=32 nproc
-}
-
-wise_cuda() { [ -n "${CUDA_HOME:-}" ]; } # whether the base image is the CUDA one
-wise_nvfortran_env() { # MPI wrappers drive the HPC SDK compilers; -tp matches the x86-64-v3 baseline
-    command -v nvfortran >/dev/null || wise_fail "nvfortran needs the CUDA base image with the NVIDIA HPC SDK"
-    export CC=nvc CXX=nvc++ FC=nvfortran F77=nvfortran F90=nvfortran
-    export OMPI_CC=nvc OMPI_CXX=nvc++ OMPI_FC=nvfortran MPICH_CC=nvc MPICH_CXX=nvc++ MPICH_FC=nvfortran
-    export CFLAGS="-O2 -tp=haswell" CXXFLAGS="-O2 -tp=haswell" FFLAGS="-O2 -tp=haswell" FCFLAGS="-O2 -tp=haswell"
-    export F77FLAGS="$FFLAGS" F90FLAGS="$FFLAGS"
-}
+# The checks of feature-tests bring the repository's SDK and point here at their copy.
+WISE_SDK_DIR=${WISE_SDK_DIR:-$WISE_PREFIX/lib/devcontainer-features}
+. "$WISE_SDK_DIR/deps.sh"
+. "$WISE_SDK_DIR/build.sh"

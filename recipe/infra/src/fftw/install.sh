@@ -2,6 +2,7 @@
 set -eu
 wise_id=fftw
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 wise_workdir
 cd "$WISE_WORK"

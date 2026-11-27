@@ -2,6 +2,7 @@
 set -eu
 wise_id=hdf5
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 wise_require_capability mpi
 wise_apt zlib1g-dev

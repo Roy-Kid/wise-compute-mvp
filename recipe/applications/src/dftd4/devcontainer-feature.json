@@ -1,0 +1,12 @@
+{
+  "id": "dftd4",
+  "version": "1.0.0",
+  "name": "DFT-D4",
+  "description": "Installs the hash-pinned dftd4 4.3.1 wheel (the D4 dispersion correction with its library built in) into the environment of the python Feature; its ASE calculator is dftd4.ase.DFTD4.",
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/toolchains/python:2": {},
+    "harbor.will/wise/wise-compute-features/applications/numpy:2": {},
+    "harbor.will/wise/wise-compute-features/applications/materials-python:2": {}
+  }
+}

@@ -2,8 +2,8 @@
 set -eu
 wise_id=numpy
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
-wise_require python
 requirements=$(mktemp)
 trap 'rm -f "$requirements"' EXIT
 cat > "$requirements" <<'REQ'

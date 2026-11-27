@@ -1,8 +1,9 @@
 #!/bin/sh
 set -eu
+# The driver reads the cell from the second line of an xyz file.
 cat > trajectory.xyz <<'XYZ'
 2
-pair
+100.0 100.0 100.0
 H 0.0 0.0 0.0
 H 1.5 0.0 0.0
 XYZ

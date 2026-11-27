@@ -2,6 +2,7 @@
 set -eu
 wise_id=cp2k-integrals
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 wise_provide cp2k-integrals
 . "$(dirname "$0")/gnu-stack.sh"
@@ -13,7 +14,6 @@ elif wise_mpi; then
     mpi=$(wise_provider mpi)
     wise_require scalapack
 fi
-cp2k_gnu_stack || wise_require fftw
 wise_apt wget unzip
 wise_workdir
 work=$WISE_WORK

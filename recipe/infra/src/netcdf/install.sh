@@ -2,9 +2,9 @@
 set -eu
 wise_id=netcdf
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 wise_require_capability mpi
-wise_require hdf5
 wise_apt m4
 wise_workdir
 cd "$WISE_WORK"

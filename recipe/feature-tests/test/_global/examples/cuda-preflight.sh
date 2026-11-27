@@ -1,7 +1,9 @@
 #!/bin/sh
 set -eu
 wise_id=cuda-preflight
-. /usr/local/lib/devcontainer-features/feature.sh
+# The SDK of the repository, copied next to these checks; it reads the registry of the image, whatever SDK built that.
+WISE_SDK_DIR=$(dirname "$0")/sdk
+. "$WISE_SDK_DIR/feature.sh"
 . "$(dirname "$0")/lammps-cuda.sh"
 lammps_cuda_file_table_available /proc/sys/fs/file-nr
 # Reproduce a file-table failure after compilation has started.

@@ -2,6 +2,7 @@
 set -eu
 wise_id=cp2k-toolchain
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 wise_provide cp2k-toolchain
 wise_require_capability cp2k-integrals
@@ -23,11 +24,9 @@ if cp2k_gnu_stack; then
     provided=install
 elif [ "$mpi" = none ]; then
     [ "$elpa$hdf5$large" = falsefalsefalse ] || wise_fail "elpa, hdf5 and largeSystems need an MPI in the image"
-    wise_require fftw
     provided=system
 else
     wise_require_capability mpi
-    wise_require fftw
     wise_require scalapack
     wise_require_if "$elpa" elpa "elpa=true"
     wise_require_if "$hdf5" hdf5 "hdf5=true"

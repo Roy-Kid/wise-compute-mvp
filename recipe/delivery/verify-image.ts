@@ -27,6 +27,8 @@ export function verifyImage(image: string, variant: string): void {
     remoteEnv: {
       MATERIALS_TEST_FEATURES: ids.join(" "),
       MATERIALS_TEST_VARIANT: variant,
+      // The compute images name /work/.tmp, which their entrance creates; this test starts none.
+      TMPDIR: "/tmp",
     },
   };
   const name = variant === "cloud" ? "cloud" : "full";
@@ -38,6 +40,11 @@ export function verifyImage(image: string, variant: string): void {
     mkdirSync(global, { recursive: true });
     cpSync(new URL("examples", fixtures), join(global, "examples"), { recursive: true });
     cpSync(new URL("./selftest", import.meta.url), join(global, "examples/selftest"), { recursive: true });
+    // The checks load the repository's SDK and read the registry of the image, whatever SDK built that.
+    mkdirSync(join(global, "examples/sdk"));
+    for (const file of ["feature.sh", "deps.sh", "build.sh"]) {
+      cpSync(new URL(`../infra/src/core/${file}`, import.meta.url), join(global, "examples/sdk", file));
+    }
     if (variant === "cuda") {
       cpSync(new URL("../applications/src/lammps/lammps-cuda.sh", import.meta.url), join(global, "examples/lammps-cuda.sh"));
     }

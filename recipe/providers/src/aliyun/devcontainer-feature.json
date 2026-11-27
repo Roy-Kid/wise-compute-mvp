@@ -1,6 +1,6 @@
 {
   "id": "aliyun",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "Alibaba Cloud SDK placeholder",
   "description": "Reserves an opt-in Feature for Alibaba Cloud server SDKs.",
   "dependsOn": {

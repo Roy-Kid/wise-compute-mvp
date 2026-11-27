@@ -1,6 +1,6 @@
 {
   "id": "openmp",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "name": "Compilers and OpenMP",
   "description": "GCC, G++ and gfortran with the OpenMP runtime, CMake, git and pkg-config: the build toolchain of every source-built Feature. Everything is compiled for the x86-64-v3 baseline (AVX2, FMA). Threads are pinned to cores; a program uses every core unless the image has an MPI, whose Feature sets one thread per rank.",
   "containerEnv": {

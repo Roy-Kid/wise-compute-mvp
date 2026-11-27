@@ -2,8 +2,8 @@
 set -eu
 wise_id=mpi4py
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
-wise_require python
 wise_require_capability mpi
 requirements=$(mktemp)
 trap 'rm -f "$requirements"' EXIT

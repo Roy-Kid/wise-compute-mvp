@@ -2,6 +2,7 @@
 set -eu
 wise_id=cp2k
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 wise_require_capability cp2k-toolchain
 deps=$WISE_PREFIX/cp2k-deps
@@ -10,7 +11,6 @@ deps=$WISE_PREFIX/cp2k-deps
 # commit, mpi, gpu, elpa, hdf5 and large, as the earlier CP2K Features built them.
 # shellcheck source=/dev/null
 . "$deps/wise.env"
-cp2k_gnu_stack || wise_require fftw
 if ! cp2k_gnu_stack && [ "$mpi" != none ]; then
     wise_require_capability mpi
     wise_require scalapack

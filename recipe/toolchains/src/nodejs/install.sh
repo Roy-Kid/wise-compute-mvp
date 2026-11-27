@@ -2,6 +2,7 @@
 set -eu
 wise_id=nodejs
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 wise_apt ca-certificates curl xz-utils
 
@@ -15,5 +16,6 @@ archive="node-v$version-linux-$arch.tar.xz"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 wise_download "https://nodejs.org/dist/v$version/$archive" "$checksum" "$work/$archive"
-tar -xJf "$work/$archive" --strip-components=1 -C /usr/local
+# The archive records its builder as owner (1000); the files and the directories they share belong to root.
+tar -xJf "$work/$archive" --strip-components=1 --no-same-owner -C /usr/local
 wise_done

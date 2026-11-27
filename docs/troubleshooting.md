@@ -1,6 +1,8 @@
 # 材料计算镜像排障
 
-适用于在 DockerBuilder 上通过 WiseHub 和 Dev Container CLI 构建、测试 CPU full 与 RTX PRO 5000 Blackwell CUDA full。本文记录本轮构建中实际遇到的故障、验证结果和仍待定位的问题。
+在构建机上通过 WiseHub 和 Dev Container CLI 构建、测试材料镜像时实际遇到过的故障，按症状查。每条写了原因和处理办法；流程本身见[发布流程](release.md)。
+
+记录里的"第 N 阶段"和 checkpoint 指早先的分阶段构建：完整镜像分八步编，每步在上一步的镜像上加几个 Feature。那套脚本已随 GitHub、GitLab 流水线删除，现在用 `wisehub image build` 一次构建；阶段号只用来说明问题出在哪个软件上（第 3 步 LAMMPS，第 4 步 Quantum ESPRESSO，第 5 至 7 步 CP2K）。
 
 ## CUDA 第 6 阶段的 signal 11 与 CP2K 的编译器
 
@@ -84,7 +86,7 @@ CPU 日志显示二进制已经生成，失败发生在从测试 workspace 执�
 
 ### 构建并行度只有 1
 
-早期编译直接用 `nproc`，受 `OMP_NUM_THREADS=1` 影响。Feature 现在通过 `wise_build_jobs` 单独计算构建并行度，上限 32，LAMMPS CUDA 有单独的 12 路上限。运行 MPI 和 OpenMP 算例时仍按配方配置线程数。[Feature SDK](../recipe/infra/src/core/feature.sh) · [LAMMPS CUDA 构建](../recipe/applications/src/lammps/lammps-cuda.sh)
+早期编译直接用 `nproc`，受 `OMP_NUM_THREADS=1` 影响。Feature 现在通过 `wise_build_jobs` 单独计算构建并行度，上限 32，LAMMPS CUDA 有单独的 12 路上限。运行 MPI 和 OpenMP 算例时仍按配方配置线程数。[Feature SDK](feature-sdk.md) · [LAMMPS CUDA 构建](../recipe/applications/src/lammps/lammps-cuda.sh)
 
 ### MPI 的 PML 加载失败、内存绑定告警或 HCOLL 初始化失败
 
@@ -108,7 +110,7 @@ CUDA checkpoint 的测试还输出了 `failed to bind memory` 和 `Hcol library 
 
 错误发生在 NVCC/Kokkos 密集编译时，出错行可能指向编译器搜索的任意头文件。Linux 给出的这条错误对应系统打开文件表耗尽（`ENFILE`）。检查 `cat /proc/sys/fs/file-nr` 与 `ulimit -n`，前者反映系统文件表，后者用于辨别另一类进程级句柄限制。采样应安排在编译高峰，结束后文件句柄会被释放。[Linux open(2)](https://man7.org/linux/man-pages/man2/open.2.html)
 
-当前 Feature 在编译前查文件表，在编译中遇到该错误时降低并行度，从同一构建目录复用已完成的目标文件。CUDA OpenMP 场景包含从 12 路降到 6 路的模拟回归。随后实际的 RTX PRO 5000 构建完成了第 3 阶段，LAMMPS 的单 rank 和双 rank Lennard-Jones 数值测试均通过。[续编逻辑](../recipe/applications/src/lammps/lammps-cuda.sh) · [数值算例](../recipe/feature-tests/test/_global/examples/lammps.sh)
+当前 Feature 在编译前查文件表，在编译中遇到该错误时降低并行度，从同一构建目录复用已完成的目标文件。CUDA OpenMP 场景包含从 12 路降到 6 路的模拟回归。随后实际的 RTX PRO 5000 构建完成了第 3 阶段，LAMMPS 的单 rank 和双 rank Lennard-Jones 数值测试均通过。[续编逻辑](../recipe/applications/src/lammps/lammps-cuda.sh) · [数值算例](../recipe/delivery/selftest/lammps.sh)
 
 ### QE 7.6 拒绝旧的 CUDA CMake 开关
 
@@ -126,23 +128,68 @@ CPU QE 构建日志另有 `grep: --include=flags.make: No such file or directory
 
 当前 checkpoint 的 QE、ELPA 和 LAMMPS 库都已查到原生 `sm_120`，LAMMPS 库还列出 `sm_80`。验收以各组件是否包含目标设备代码为准，实际运算在真卡上复核。[CUDA 交付配置](../recipe/delivery/cuda/.devcontainer/devcontainer.json) · [NVIDIA GPU 计算能力](https://developer.nvidia.com/cuda/gpus)
 
-## 从 checkpoint 续编和核对验收
+## ASE 计算器 Feature
 
-本轮 CPU full 的 `wise-compute:materials-cpu` 已通过 Dev Container CLI 的完整验收，且已在本机保存 `.tar.zst` 和 SHA-256 校验文件。CUDA full 从第 4 阶段的 checkpoint 续编第 5 至 8 阶段，离线验收通过后在 DockerBuilder 本地打上 `wise-compute:materials-cuda` 标签。QE 和 CP2K 的设备算例在离线验收中跳过，需要到 GPU 节点设置 `FEATURE_TEST_GPU=1` 复核。恢复旧 checkpoint 时确认其中应用的目标架构，分片对象也应来自同一份源码、工具链和目标架构。[阶段入口](../recipe/delivery/ci-stage.ts) · [阶段定义](../recipe/delivery/stages.ts)
+### `import gpaw`、`import asap3` 或 `dp train` 在 CUDA 镜像上没有反应
 
-```bash
-docker image inspect materials-build:cuda-4 --format '{{.Id}} {{.Os}}/{{.Architecture}}' &&
-node recipe/delivery/ci-stage.ts cuda 5 &&
-node recipe/delivery/ci-stage.ts cuda 6 &&
-node recipe/delivery/ci-stage.ts cuda 7 &&
-node recipe/delivery/ci-stage.ts cuda 8 &&
-node recipe/delivery/ci-stage.ts cuda release
-```
+带 MPI 编译的 Python 模块在导入时初始化 MPI，DeePMD-kit 训练时会导入已安装的 mpi4py。CUDA 镜像的 HPC-X Open MPI 4.1 不经启动器初始化时要另起守护进程，在容器里会一直等待，与上文 `ld1.x` 的情况相同。CUDA 基座现在设置 `OMPI_MCA_ess_singleton_isolated=1`，不经 `mpirun` 也能立即启动（在 `0.1.0-dev.2` 镜像上实测：不设时 60 秒超时，设后 0.3 秒返回），代价是这样启动的进程不能再用 `MPI_Comm_spawn`。促成这一改动的是 PLUMED：它的 configure 会直接运行一个 MPI 测试程序，CUDA 场景因此停了近 4 小时。`0.1.0-dev.2` 的 CUDA 镜像构建于此之前，在它上面用 `mpirun -n 1 python3 脚本.py` 或 `mpirun -n 1 dp …` 启动，或自行设置这个变量。[Asap 安装脚本](../recipe/applications/src/asap3/install.sh) · [GPAW 算例](../recipe/delivery/selftest/gpaw.sh)
 
-验收脚本里直接执行 `lmp` 会像下文的 `ld1.x` 一样卡在 MPI 单进程初始化，完整镜像验收因此用 `mpirun -n 1` 启动单进程的 LAMMPS 检查。
+### JDFTx 编译报 `'XC_LDA_X_RAE' was not declared in this scope`
 
-DockerBuilder 的本地 full 标签和 Harbor 发布引用是两个位置。CPU 的 Lavas 发布配方记录了预期的 Harbor 引用、基座 digest 和各应用版本。确认发布状态时检查 Harbor 上该引用能否解析到已验收的镜像 digest。CPU 归档可在有 Docker 的机器上先用同目录的 `.sha256` 文件校验，再通过 `zstd -dc <归档> | docker image load` 恢复。[Lavas 发布配方](../recipe/delivery/cpu/lavas-release.json) · [WiseHub 镜像推拉](cli.md)
+Libxc 7 的 `xc.h` 不再包含 `xc_funcs.h`，JDFTx 1.7.0 生成的泛函表因此找不到编号。libxc Feature 固定在 6.2.2，GPAW、ABACUS 和 JDFTx 共用。[libxc 安装脚本](../recipe/infra/src/libxc/install.sh)
 
-本轮 DockerBuilder 的日志目录为 `/opt/lavas/wisehub-full.kr4TFb/logs`。CUDA 第 5 至 8 阶段和 release 的日志在其下的 `gnu-stack` 目录。优先查看 `cuda.build.log`、对应的 `cuda.stage-N.log`、`cuda.feature-gate.log` 及 `cuda.release.log`。较早的 CPU 快照与挂载复现日志位于 `/opt/lavas/wisehub-feature-tests.0TxbcA`。验收结论取测试报告或 `.exit` 文件，避免仅凭某条中间告警判定结果。
+### GPAW 导入报 `undefined symbol: elpa_generalized_eigenvectors_d`
 
-成功构建日志也记录过 locale 配置缺少、`debconf` 无交互前端、容器内 systemd 用户或组缺少，以及 LAMMPS 配置探测 FFmpeg 和 PNetCDF 不可用。这些行在本轮对应任务最终通过，复现时以实际 Feature 需求和该步骤退出状态判断影响。
+GPAW 25.7.0 直接调用这个 C 函数，ELPA 2026.02 导出的名字是 `elpa_generalized_eigenvectors_a_h_a_d`。GPAW 不链接 ELPA，并行对角化用 ScaLAPACK。[GPAW 安装脚本](../recipe/applications/src/gpaw/install.sh)
+
+### ABACUS 的 CUDA 版链接时报 `cannot find -lnvToolsExt`
+
+ABACUS 只在自己选择 CUDA 架构时查询工具包版本，传入 `CMAKE_CUDA_ARCHITECTURES` 后版本为空，就会去链接 CUDA 12.9 已移除的 nvToolsExt。Feature 把 `nvcc` 报告的版本作为 `CUDAToolkit_VERSION` 传入，并把 HPC SDK 放 cuBLAS、cuSOLVER 和 cuFFT 的目录加进 `LIBRARY_PATH`。[ABACUS 安装脚本](../recipe/applications/src/abacus/install.sh)
+
+### 新 Feature 里的 `if wise_mpi` 总是走无 MPI 分支
+
+在较早构建的镜像上单独加装 Feature 时，镜像里的 Feature SDK 还没有 `wise_mpi`，shell 把未知命令当作条件不成立。先重装 `core` Feature，或从基座重新构建。SDK 4 起每个安装脚本开头声明 `wise_sdk 4`，在这类镜像上会立即以 `wise_sdk: not found` 或“needs Feature SDK”终止，不再静默走错分支；`0.1.0-dev.2` 及更早的镜像属于这种情况。[Feature SDK](feature-sdk.md)
+
+### Quantum ESPRESSO 的 `ld1.x` 在核数很多的机器上跑不完
+
+SMP 镜像不限制 OpenMP 线程数。在 256 核的构建机上，`ld1.x` 开满线程后几乎全在等待，最小算例超过 300 秒。自检对这一步设 `OMP_NUM_THREADS=1`，核数很多的主机上跑原子程序时同样设置。[QE 算例](../recipe/delivery/selftest/quantum-espresso.sh)
+
+## 平台 SSH 入口和打包
+
+### 改名后的 `compute` 用户能改写 `/usr/local/bin`
+
+Node.js 的发布包记着打包者的属主（UID 1000），以 root 解包时保留了下来，`/usr/local/bin`、`/usr/local/lib` 等目录因此属于 1000。把 Ubuntu 自带的 1000 号用户改名为 `compute` 后，跑任务的用户就能改写系统目录。nodejs Feature 现在用 `--no-same-owner` 解包；入口层另外把镜像里所有属于 1000 的文件改回 root，并检查没有遗漏。[平台 SSH 入口](../recipe/delivery/compute/README.md)
+
+### 公钥登录被拒，日志里是账户被锁
+
+Ubuntu 自带的 `ubuntu` 用户在 `/etc/shadow` 里的口令字段是 `!`，表示锁定。sshd 以 `UsePAM no` 运行时拒绝锁定的账户，哪怕公钥正确。入口层把口令字段设为 `*`：没有可用口令，但账户不算锁定。
+
+### SSH 里找不到程序，容器里却能运行
+
+sshd 不带 PAM 时，会话得不到镜像的 `ENV`，而且只读配置里的第一条 `SetEnv`。入口层在构建时把镜像的全部环境变量写进这一条。`compute/check.sh` 逐个比较容器和 SSH 会话的环境变量，缺一个就失败。
+
+### `docker run <镜像> <命令>` 报 `Missing authorized public key`
+
+加了入口的镜像以 sshd 为入口，不接收命令。调试用 `docker run --entrypoint sh`；自检的 `run-in-image.sh` 已经这样做。
+
+### 构建偶尔在解析 `docker/dockerfile:1` 时失败
+
+Dockerfile 首行的 `# syntax=docker/dockerfile:1` 让每次构建都去 Docker Hub 取前端镜像。构建机到 Docker Hub 的连接不稳，表现为 `TLS handshake timeout` 或 `EOF`，几秒内失败，与被构建的 Feature 无关；重跑即可。入口层的 Dockerfile 不写这一行，用构建器自带的前端。
+
+### Multiwfn 单独安装时报 `curl: not found`
+
+它的安装脚本用 curl 下载，却只装了 `unzip`，也不依赖带 curl 的 `openmp` Feature。和别的 Feature 一起装时 curl 恰好已经在，只有它自己的场景会暴露。现在脚本自己安装 `ca-certificates` 和 `curl`。一个 Feature 用到的系统工具，要么由它依赖的 Feature 提供，要么自己装。
+
+### `test:delivery` 在旧镜像上报 `wise_mpi: not found`
+
+验收脚本调用了镜像里那版 SDK 没有的函数。现在三个验收检查带着仓库的 SDK 进容器，只读镜像里的登记，任何 SDK 版本构建的镜像都能验。[Feature SDK](feature-sdk.md#sdk-版本)
+
+## 核对一次构建
+
+验收脚本里直接执行 `lmp` 会像上文的 `ld1.x` 一样卡在 MPI 单进程初始化，完整镜像验收因此用 `mpirun -n 1` 启动单进程的 LAMMPS 检查。
+
+构建机的本地标签、导出的归档和 Harbor 上的引用是三个位置。确认交付的是哪个镜像时比对镜像 ID：`wisehub image export` 把它写进 `manifest.json`，`wisehub image push` 读回 registry 的 digest 核对。归档先用同目录的 `.sha256` 文件校验，再 `zstd -dc <归档> | docker load` 恢复。[CLI 参考](cli.md)
+
+验收结论取测试报告和命令的退出状态，不凭某条中间告警判定。成功的构建日志里也出现过 locale 配置缺少、`debconf` 无交互前端、容器内 systemd 用户或组缺少，以及 LAMMPS 配置探测 FFmpeg 和 PNetCDF 不可用，这些都不影响结果。
+
+构建机上不要用宽松的 `pkill -f` 模式清理自己的任务：容器里的进程在宿主机上都可见，`chain.sh` 这样的模式会匹配到别的构建里的 `install_cp2k_toolchain.sh`。按完整命令行锚定，或按 PID 结束。

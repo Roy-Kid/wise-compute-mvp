@@ -2,6 +2,7 @@
 set -eu
 wise_id=linear-algebra
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 backend=openmp
 if wise_cuda; then backend=pthread; fi

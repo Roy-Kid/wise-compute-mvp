@@ -1,6 +1,6 @@
 {
   "id": "packmol",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "name": "Packmol",
   "description": "Builds Packmol 21.2.3 into /usr/local.",
   "dependsOn": {

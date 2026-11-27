@@ -16,8 +16,9 @@ cat > atom.in <<'ATOM'
 2P 2 1 0.00 0.00 0.75 0.75
 ATOM
 # A program built with MPI starts under its launcher; a threaded build has none.
+# The atomic code gains nothing from threads, and on a host with hundreds of cores they only wait on each other.
 launch() { if command -v mpirun > /dev/null; then mpirun -n 1 "$@"; else "$@"; fi; }
-launch ld1.x -in atom.in > atom.out || { cat atom.out; exit 1; }
+OMP_NUM_THREADS=1 launch ld1.x -in atom.in > atom.out || { cat atom.out; exit 1; }
 test -s H.UPF
 cat > molecule.in <<'QE'
 &control

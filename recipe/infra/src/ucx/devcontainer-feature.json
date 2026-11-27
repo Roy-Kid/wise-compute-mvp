@@ -1,6 +1,6 @@
 {
   "id": "ucx",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "name": "UCX",
   "description": "Builds UCX 1.21.1 into /usr/local: InfiniBand/RoCE (verbs, rdmacm), shared memory with CMA and, on the CUDA base image, CUDA memory and GPUDirect RDMA through GDRCopy. Open MPI's point-to-point layer across nodes.",
   "dependsOn": {

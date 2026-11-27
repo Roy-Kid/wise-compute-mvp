@@ -2,9 +2,8 @@
 set -eu
 wise_id=lammps
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
-wise_require fftw
-wise_require linear-algebra
 list() { echo "$1" | tr ',' ' '; }
 member() { case " $2 " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 variant=${VARIANT:-cpu}
@@ -50,8 +49,15 @@ provider() { # package -> backing Feature
     return 1
 }
 backed() { # package: a Feature-backed package needs its Feature; a downloading one without a Feature fails
-    if feature=$(provider "$1"); then wise_require "$feature" "LAMMPS package $1"
-    elif member "$1" "$downloading"; then wise_fail "package $1 downloads third-party code and no Feature provides it yet"; fi
+    # One line for each entry of providers, with the Feature written out for `wisehub feature check`.
+    case $1 in
+        PLUMED) wise_require plumed "LAMMPS package $1" ;;
+        H5MD) wise_require hdf5 "LAMMPS package $1" ;;
+        NETCDF) wise_require netcdf "LAMMPS package $1" ;;
+        *)
+            ! provider "$1" > /dev/null || wise_fail "package $1 has a Feature that backed() does not know"
+            ! member "$1" "$downloading" || wise_fail "package $1 downloads third-party code and no Feature provides it yet" ;;
+    esac
 }
 for package in $extra; do backed "$package"; done
 

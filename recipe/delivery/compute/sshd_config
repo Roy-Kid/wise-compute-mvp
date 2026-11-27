@@ -1,0 +1,28 @@
+Port 2222
+ListenAddress 0.0.0.0
+HostKey /run/wise-compute-host/keys/ssh_host_ed25519_key
+PidFile /run/wise-compute-host/sshd.pid
+AuthorizedKeysFile /run/wise-compute/authorized_keys
+StrictModes yes
+PubkeyAuthentication yes
+AuthenticationMethods publickey
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+UsePAM no
+PermitRootLogin no
+AllowUsers compute
+AllowAgentForwarding no
+AllowTcpForwarding no
+X11Forwarding no
+PermitTunnel no
+GatewayPorts no
+PermitUserEnvironment no
+LogLevel VERBOSE
+PrintMotd no
+PrintLastLog no
+ClientAliveInterval 60
+ClientAliveCountMax 3
+Subsystem sftp internal-sftp
+# OpenSSH takes only the first SetEnv directive; keep the full job environment together.
+SetEnv PATH=/usr/local/cuda/bin:/usr/local/nvidia/bin:/opt/conda/bin:/usr/local/sbin:/usr/sbin:/usr/local/bin:/usr/bin:/bin HOME=/work TMPDIR=/work/.tmp OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 MPLBACKEND=Agg

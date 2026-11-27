@@ -2,19 +2,31 @@
 import { parseArgs } from "node:util";
 import { DevContainerBuilder } from "./build.ts";
 import { RegistryError } from "./docker.ts";
+import { checkStack } from "./check.ts";
 import { FeaturePublisher } from "./features.ts";
 import { OciRegistry } from "./registry.ts";
+import { exportImages, extendImage, listFeatures, recordFeatures } from "./release.ts";
 
 const usage = `Usage:
   wisehub image build [--workspace-folder DIR] [--config FILE] [--platform OS/ARCH] [--base-image REF] [--local-features RECIPE]
                       (--image NAME | --service-image SERVICE=NAME ...) [-- devcontainer build flags]
   wisehub image push SOURCE REGISTRY/REPOSITORY:TAG
   wisehub image pull REGISTRY/REPOSITORY(:TAG|@DIGEST) [--platform OS/ARCH]
+  wisehub image extend SOURCE --context DIR --image NAME [--platform OS/ARCH] [--build-arg NAME=VALUE ...]
+  wisehub image export IMAGE:TAG ... --output DIR
   wisehub feature publish RECIPE --registry HOST --namespace NAMESPACE
+  wisehub feature check RECIPE
+  wisehub feature list IMAGE [--record FILE]
 
 --local-features builds with the recipe's Feature sources in place of their registry references.
 --base-image overrides the Dockerfile's BASE_IMAGE build argument.
 feature publish pushes each collection RECIPE/<collection>/src to HOST/NAMESPACE/<collection>, lowest first.
+image extend builds the Dockerfile in DIR on top of the local image SOURCE, which it receives as BASE_IMAGE.
+image export saves each image as DIR/<tag>.tar.zst with its SHA-256 and writes DIR/manifest.json; needs zstd.
+feature list prints the Features an image holds, as its core Feature registered them; --record writes
+them into the "features" field of a JSON release record.
+feature check compares every install.sh with the SDK of the core Feature and with the Feature's own
+dependsOn and installsAfter, and fails when it finds a violation.
 
 Results are printed to stdout as JSON; progress goes to stderr.
 For any other Dev Container operation, run the devcontainer CLI directly.`;
@@ -86,9 +98,57 @@ async function publish(args: string[]): Promise<void> {
   print(await new FeaturePublisher().publish(positionals[0], values.registry, values.namespace));
 }
 
+async function extend(args: string[]): Promise<void> {
+  const { values, positionals } = parseArgs({
+    args, allowPositionals: true,
+    options: {
+      context: { type: "string" }, image: { type: "string" }, platform: { type: "string" },
+      "build-arg": { type: "string", multiple: true },
+    },
+  });
+  if (positionals.length !== 1 || !values.context || !values.image) {
+    throw new UsageError("image extend takes SOURCE, --context and --image");
+  }
+  const buildArgs: Record<string, string> = {};
+  for (const entry of values["build-arg"] ?? []) {
+    const split = entry.indexOf("=");
+    if (split < 1) throw new UsageError(`Expected NAME=VALUE, got ${entry}`);
+    buildArgs[entry.slice(0, split)] = entry.slice(split + 1);
+  }
+  if (Object.hasOwn(buildArgs, "BASE_IMAGE")) throw new UsageError("BASE_IMAGE is SOURCE; do not pass it as --build-arg");
+  print(await extendImage({ source: positionals[0], context: values.context, image: values.image, platform: values.platform, buildArgs }));
+}
+
+async function exportArchives(args: string[]): Promise<void> {
+  const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { output: { type: "string" } } });
+  if (!positionals.length || !values.output) throw new UsageError("image export takes one or more IMAGE:TAG and --output");
+  if (positionals.some(reference => !/:[A-Za-z0-9_][A-Za-z0-9_.-]*$/.test(reference) || reference.includes("@"))) {
+    throw new UsageError("image export needs a tag on every image; the tag names the archive");
+  }
+  print(await exportImages(positionals, values.output));
+}
+
+async function list(args: string[]): Promise<void> {
+  const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { record: { type: "string" } } });
+  if (positionals.length !== 1) throw new UsageError("feature list takes one IMAGE");
+  const listed = await listFeatures(positionals[0]);
+  if (values.record) recordFeatures(values.record, listed.features);
+  print(listed);
+}
+
+class CheckError extends Error {}
+
+async function check(args: string[]): Promise<void> {
+  const { positionals } = parseArgs({ args, allowPositionals: true, options: {} });
+  if (positionals.length !== 1) throw new UsageError("feature check takes RECIPE");
+  const findings = checkStack(positionals[0]);
+  print({ findings });
+  if (findings.length) throw new CheckError(`${findings.length} violation(s) of the Feature SDK contract`);
+}
+
 const commands: Record<string, Record<string, (args: string[]) => Promise<void>>> = {
-  image: { build, push, pull },
-  feature: { publish },
+  image: { build, push, pull, extend, export: exportArchives },
+  feature: { publish, check, list },
 };
 
 async function main([group, command, ...rest]: string[]): Promise<number> {

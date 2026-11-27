@@ -1,6 +1,6 @@
 {
   "id": "cloud-host",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "Cloud host tools and reports",
   "description": "Installs common CLI tools, CJK fonts, headless plotting and PDF generation into a lightweight Ubuntu cloud image.",
   "containerEnv": {

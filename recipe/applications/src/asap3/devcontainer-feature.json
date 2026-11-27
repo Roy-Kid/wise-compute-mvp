@@ -1,0 +1,17 @@
+{
+  "id": "asap3",
+  "version": "1.0.0",
+  "name": "Asap",
+  "description": "Builds the hash-pinned Asap 3.13.11 sdist (EMT and other classical potentials for large-scale molecular dynamics with ASE) into the environment of the python Feature, with the image's MPI when it has one.",
+  "dependsOn": {
+    "harbor.will/wise/wise-compute-features/infra/core:3": {},
+    "harbor.will/wise/wise-compute-features/infra/openmp:3": {},
+    "harbor.will/wise/wise-compute-features/toolchains/python:2": {},
+    "harbor.will/wise/wise-compute-features/applications/numpy:2": {},
+    "harbor.will/wise/wise-compute-features/applications/materials-python:2": {}
+  },
+  "installsAfter": [
+    "harbor.will/wise/wise-compute-features/infra/openmpi:3",
+    "harbor.will/wise/wise-compute-features/infra/mpich:3"
+  ]
+}

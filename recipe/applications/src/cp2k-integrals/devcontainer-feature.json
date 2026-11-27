@@ -1,6 +1,6 @@
 {
   "id": "cp2k-integrals",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "name": "CP2K integral libraries",
   "description": "Builds libint and libxc, the longest part of CP2K 2026.2's checksum-verified toolchain; the cp2k-toolchain Feature continues from here.",
   "dependsOn": {

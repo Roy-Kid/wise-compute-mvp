@@ -2,9 +2,9 @@
 set -eu
 wise_id=elpa
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 wise_require_capability mpi
-wise_require scalapack
 arch=${CUDAARCH:-80}
 wise_workdir
 cd "$WISE_WORK"

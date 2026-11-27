@@ -1,6 +1,6 @@
 {
   "id": "multiwfn",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "Multiwfn",
   "description": "Installs the official Multiwfn 2026.11.26 program without GUI and its example files into /usr/local/share/multiwfn. The Multiwfn command sets the stack size and settings path the manual asks for. The sources support only the Intel compiler, so this is the author's binary.",
   "dependsOn": {

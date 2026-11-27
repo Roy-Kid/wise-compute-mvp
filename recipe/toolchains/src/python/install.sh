@@ -2,6 +2,7 @@
 set -eu
 wise_id=python
 . /usr/local/lib/devcontainer-features/feature.sh
+wise_sdk 4
 
 # WISE_VENV comes from this Feature's containerEnv, which the build applies before install.sh runs.
 : "${WISE_VENV:?WISE_VENV must be set by the python Feature metadata}"
